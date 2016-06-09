@@ -504,7 +504,7 @@ function File_Load_menu_Callback(hObject, eventdata, handles)
 	%-----------------------------------------------
 	% Update files information
 	%-----------------------------------------------
-	[rawpath, basename, baseext] = fileparts(fullfile(pathname, filename))
+	[rawpath, basename, ~] = fileparts(fullfile(pathname, filename));
 	handles.Files.rawpath = rawpath;
 	handles.Files.basename = basename;
 	handles.Files.datname = [handles.Files.basename '.dat'];
@@ -521,13 +521,14 @@ function File_Load_menu_Callback(hObject, eventdata, handles)
 	pul = struct('tr', [], 'rr', []);
 	[pul.tr, pul.rr] = readPUL(fullfile(handles.Files.rawpath, handles.Files.pulname));
 	% build dsc struct
-	dsc = buildDSC(fullfile(handles.Files.rawpath, handles.Files.datname), pgf, pul.rr);
+	dsc = buildDSC(fullfile(handles.Files.rawpath, handles.Files.datname), pgf, pul.rr); %#ok<NASGU>
 	% create experiment object
 	handles.E = experiment(handles.Files.rawpath, handles.Files.datname, 'initialize');
-	% load log file
-	logData = readLog(handles.Files.logname);
-	% set information in experiment object from logData
-	handles.E.SetInfoFromLog(logData);
+	keyboard
+% 	% load log file
+% 	logData = readLog(handles.Files.logname);
+% 	% set information in experiment object from logData
+% 	handles.E.SetInfoFromLog(logData);
 	% store changes
 	guidata(hObject, handles);
 

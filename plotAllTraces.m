@@ -3,7 +3,8 @@ function aH = plotAllTraces(trialdata, varargin)
 % aH = plotAllTraces(trialdata, varargin)
 %-----------------------------------------------------------------------------
 % 
-% 
+% Given input data of all trial sweeps (trialdata), plots all traces
+% overlaid
 %-----------------------------------------------------------------------------
 % Input Arguments:
 %
