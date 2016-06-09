@@ -1,5 +1,5 @@
 %-------------------------------------------------------------------------
-% redat.m
+% reading_data_example.m
 %-------------------------------------------------------------------------
 % IntraHEKAToolbox
 %-------------------------------------------------------------------------
@@ -10,13 +10,16 @@
 % See Also: readPGF, readPUL, readDAT, readHEKA, HEKAview
 %-------------------------------------------------------------------------
 
-
 %-------------------------------------------------------------------------
-% Sharad J. Shanbhag sshanbhag@neomed.edu
+% Sharad J. Shanbhag 
+% sshanbhag@neomed.edu
 %-------------------------------------------------------------------------
 % Revisions: 
 % 	2012 (SJS): Created 
-% 	9 Jun 2016 (SJS): comments added
+% 	9 Jun 2016 (SJS): 
+% 	 -	comments added
+% 	 -	enabled git tracking
+% 	 -	renamed to reading_data_example
 %-------------------------------------------------------------------------
 
 % path to raw data directory
