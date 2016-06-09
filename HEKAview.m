@@ -22,7 +22,7 @@ function varargout = HEKAview(varargin)
 
 % Edit the above text to modify the response to help HEKAview
 
-% Last Modified by GUIDE v2.5 23-Apr-2012 17:51:57
+% Last Modified by GUIDE v2.5 09-Jun-2016 13:03:53
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -56,7 +56,7 @@ end
 %-----------------------------------------------------------------------------
 % --- Executes just before HEKAview is made visible.
 %-----------------------------------------------------------------------------
-function HEKAview_OpeningFcn(hObject, eventdata, handles, varargin)
+function HEKAview_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 % This function has no output args, see OutputFcn.
 %	hObject    handle to figure
 %	eventdata  reserved - to be defined in a future version of MATLAB
@@ -104,9 +104,10 @@ function initialize_gui(fig_handle, handles, isreset)
 	end
 
 	% set some default values
-	handles.Files.logpath = '/Users/sshanbhag/Work/Data/IntracellularAmygdala/RawData/';
+	handles.Files.logpath = '/Users/sshanbhag/Work/Data/Mouse/IntracellularAmygdala/RawData';
 	handles.Files.logfile = 'IntracellDataLog.csv';
 	handles.Files.logname = fullfile(handles.Files.logpath, handles.Files.logfile);
+	set(handles.textLogFile, 'String', handles.Files.logname);
 	handles.Files.rawpath = '/Users/sshanbhag/Work/Data/IntracellularAmygdala/RawData/2012-03-12';
 	handles.Files.basename = '2012-03-12-4'; 
 	handles.Files.datname = [handles.Files.basename '.dat'];
@@ -211,10 +212,10 @@ function update_gui(hObj, handles)
 		
 		% show line for mean of trace
 		if H.Values.PlotMean
-			[t1, t2] = H.E.GetTrace(H.Values.CurrentSweep);
+			[t1, t2] = H.E.GetTrace(H.Values.CurrentSweep); %#ok<ASGLU>
 			% get avg and std of trace in mV (hence the factor of 1000)
 			t2avg = 1000 * mean(t2);
-			t2std = std(1000 * t2);
+			t2std = std(1000 * t2); %#ok<NASGU>
 			%		axes(H.axesMain);
 			% draw line
 			line(xlim, [t2avg t2avg],  'Color', H.Settings.MeanLineColor);
@@ -245,7 +246,7 @@ function update_gui(hObj, handles)
 
 %-----------------------------------------------------------------------------
 %-----------------------------------------------------------------------------
-function Tmin_ctrl_Callback(hObject, eventdata, handles)
+function Tmin_ctrl_Callback(hObject, eventdata, handles) %#ok<*DEFNU>
 	newval = str2double(get(hObject, 'String'));
 	if isnan(newval)
 		 update_ui_str(hObject, handles.Values.Tmin);
@@ -433,7 +434,8 @@ function MousePos_ctrl_Callback(hObject, eventdata, handles)
 %-----------------------------------------------------------------------------
 function TraceMean_ctrl_Callback(hObject, eventdata, handles)
 	% Get value from object
-	handles.Values.PlotMean = read_ui_val(hObject)
+	handles.Values.PlotMean = read_ui_val(hObject);
+	sprintf('handles.Values.PlotMean = %f', handles.Values.PlotMean);
 	guidata(hObject, handles);
 	update_gui(hObject, handles);
 %-----------------------------------------------------------------------------
@@ -490,7 +492,6 @@ function File_menu_Callback(hObject, eventdata, handles)
 %-----------------------------------------------------------------------------
 %-----------------------------------------------------------------------------
 function File_Load_menu_Callback(hObject, eventdata, handles)
-
 	%-----------------------------------------------
 	% get file from user
 	%-----------------------------------------------
@@ -524,11 +525,15 @@ function File_Load_menu_Callback(hObject, eventdata, handles)
 	dsc = buildDSC(fullfile(handles.Files.rawpath, handles.Files.datname), pgf, pul.rr); %#ok<NASGU>
 	% create experiment object
 	handles.E = experiment(handles.Files.rawpath, handles.Files.datname, 'initialize');
-	keyboard
-% 	% load log file
-% 	logData = readLog(handles.Files.logname);
-% 	% set information in experiment object from logData
-% 	handles.E.SetInfoFromLog(logData);
+	% load log file
+	try
+		logData = readLog(handles.Files.logname);
+	catch errMsg
+		sprintf('%s', errMsg.identifier)
+		error('%s: error reading log file, check path or filename and re-load', mfilename);
+	end
+	% set information in experiment object from logData
+	handles.E.SetInfoFromLog(logData);
 	% store changes
 	guidata(hObject, handles);
 
@@ -613,6 +618,32 @@ function Plot_Save_menu_Callback(hObject, eventdata, handles)
 %-----------------------------------------------------------------------------
 %-----------------------------------------------------------------------------
 
+%-----------------------------------------------------------------------------
+%-----------------------------------------------------------------------------
+function buttonLoadLogFile_Callback(hObject, eventdata, handles)
+	%-----------------------------------------------
+	% get file from user
+% 		handles.Files.logpath = '/Users/sshanbhag/Work/Data/Mouse/IntracellularAmygdala/RawData';
+% 	handles.Files.logfile = 'IntracellDataLog.csv';
+% 	handles.Files.logname = fullfile(handles.Files.logpath, handles.Files.logfile);
+% 
+	%-----------------------------------------------
+	[filename, pathname] = uigetfile('*.csv', ...
+						'Select experiment log file', handles.Files.logpath);
+	% if user cancelled, abort
+	if isequal(filename, 0) || isequal(pathname, 0)
+		disp('Cancelled Load File..')
+		return
+	end	
+
+	handles.Files.logpath = pathname;
+	handles.Files.logfile = filename;
+	handles.Files.logname = fullfile(handles.Files.logpath, ...
+													handles.Files.logfile);
+	set(handles.textLogFile, 'String', handles.Files.logname);
+	guidata(hObject, handles);
+%-----------------------------------------------------------------------------
+%-----------------------------------------------------------------------------
 
 
 %*****************************************************************************
@@ -657,3 +688,5 @@ function Sweep_ctrl_CreateFcn(hObject, eventdata, handles)
 %-----------------------------------------------------------------------------
 %*****************************************************************************
 %*****************************************************************************
+
+
