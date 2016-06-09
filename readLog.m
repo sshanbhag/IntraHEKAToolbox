@@ -50,6 +50,7 @@ function out = readLog(logfile, outfmt)
 % 		- added code to read in information and store in outstruct
 %	24 Apr 2012 (SJS):
 % 		- added output format selection
+%	9 Jun 2016 (SJS): updated comments, added check for failed fopen()
 %-----------------------------------------------------------------------------
 % TO DO:
 %-----------------------------------------------------------------------------
@@ -58,7 +59,7 @@ function out = readLog(logfile, outfmt)
 if ~exist('logfile', 'var')
 	[logfile, logpath] = uigetfile('*.csv', 'Select log file');
 	if isequal(logfile, 0) || isequal(logpath, 0)
-		outstruct = [];
+		outstruct = []; %#ok<NASGU>
 		return
 	end
 	logfile = fullfile(logpath, logfile);
@@ -74,6 +75,10 @@ fprintf('\t%d data lines\n\n', Ndatalines);
 
 % open file
 fp = fopen(logfile, 'rt');
+% check if error opening file
+if fp == -1
+	error('%s: could not open file %s for reading', mfilename, logfile);
+end
 
 % read fields and scan for fieldnames
 tmpln = fgetl(fp);

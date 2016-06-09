@@ -29,6 +29,7 @@ function in_data = readDAT(datfile, pgf, pul_rr)
 %	27 Mar 2012 (SJS)
 % 		-	added file location information for each sweep
 % 		-	removed id substruct to simplify trace storage
+%	9 Jun 2016 (SJS): updated comments, added check for failed fopen()
 %-----------------------------------------------------------------------------
 % TO DO:
 %-----------------------------------------------------------------------------
@@ -40,6 +41,11 @@ function in_data = readDAT(datfile, pgf, pul_rr)
 %-----------------------------------------------------------------------------
 % open file
 fp = fopen(datfile, 'r', 'ieee-le');
+
+% check if error opening file
+if fp == -1
+	error('%s: could not open file %s for reading', mfilename, pgffile);
+end
 
 ns = 1;
 for i = 1:pul_rr.number_children

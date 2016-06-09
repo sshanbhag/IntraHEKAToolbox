@@ -2,6 +2,8 @@ function pgf = readPGF(pgffile)
 %-----------------------------------------------------------------------------
 % pgf = readPGF(pgffile)
 %-----------------------------------------------------------------------------
+% IntraHEKAToolbox
+%-------------------------------------------------------------------------
 % 
 % Reads data from HEKA .pgf file
 % 
@@ -24,6 +26,7 @@ function pgf = readPGF(pgffile)
 % 				based on Visual Basic code clsOData.vb by Olga Galazyuk
 %
 % Revisions:
+%	9 Jun 2016 (SJS): updated comments, added check for failed fopen()
 %-----------------------------------------------------------------------------
 % TO DO:
 %-----------------------------------------------------------------------------
@@ -47,6 +50,11 @@ BYTE = 'uint8';
 
 % open file
 fp = fopen(pgffile, 'r', 'ieee-le');
+
+% check if error opening file
+if fp == -1
+	error('%s: could not open file %s for reading', mfilename, pgffile);
+end
 
 pgf.magic_number = fread(fp, 1, 'int32');
 pgf.number_tree_levels = fread(fp, 1, 'int32');
