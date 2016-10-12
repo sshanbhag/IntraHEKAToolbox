@@ -185,7 +185,6 @@ function update_gui(hObj, handles)
 		% SHOW SINGLE TRACE
 		% get trace data and plot them
 		axes(H.axesMain);
-		H.Values.CurrentSweep
 		[dt, S, T] = H.E.GetResampledTrace(	H.Values.CurrentSweep, ...
 																H.Values.Decifactor);
 		tvec = 1000 .* ((1:length(S)) - 1)  .* dt;
@@ -560,10 +559,8 @@ function LoadData(hObject, eventdata, handles)
 													handles.Values.CurrentCondition);
 	handles.Values.Nsweeps = length(sweeplist);
 	handles.Values.Sweeplist = sweeplist;
-	% set the current sweep to Nsweeps + 1 (all sweeps)
-	handles.Values.CurrentSweep = handles.Values.Nsweeps + 1;
-	% update Sweep control to current sweep (all sweeps)
-	update_ui_val(handles.Sweep_ctrl, handles.Values.CurrentSweep);
+	% set the current sweep to -1 (all sweeps)
+	handles.Values.CurrentSweep = -1;
 	% create text list of sweeps
 	cstr = cell(handles.Values.Nsweeps + 1, 1);
 	for n = 1:handles.Values.Nsweeps
@@ -571,6 +568,8 @@ function LoadData(hObject, eventdata, handles)
 	end
 	cstr{end} = 'All';
 	set(handles.Sweep_ctrl, 'String', cstr);
+	% update Sweep control to current sweep (all sweeps)
+	update_ui_val(handles.Sweep_ctrl, handles.Values.Nsweeps + 1);
 	%-----------------------------------------------
 	% update File string in Recording Info panel
 	%-----------------------------------------------

@@ -482,6 +482,9 @@ classdef experiment < handle
 			if ~obj.isInitialized
 				warning('%s: object not initialized', mfilename);
 				return
+			elseif Condition == obj.Info.Nconditions
+				out = 1;
+				return
 			% check that Condition is inbounds
 			elseif ~between(Condition, 1, obj.Info.Nconditions)
 				warning('%s: Condition %d not within bounds (Nconditions: %d)', ...

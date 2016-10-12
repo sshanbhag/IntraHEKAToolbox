@@ -35,13 +35,11 @@ function h = PlotTracesForCondition(obj, Condition, varargin)
 % TO DO:
 %-----------------------------------------------------------------------------
 
-
 % make sure object is initialized
 if ~obj.isInitialized
 	warning('%s: object not initialized', mfilename);
 	return
 end
-
 
 % check inputs
 switch length(varargin)
@@ -60,26 +58,39 @@ switch length(varargin)
 end
 
 % check that Condition is inbounds
-if ~between(Condition, 1, obj.Info.Nconditions)
-	warning('%s: Condition %d not within bounds (Nconditions: %d)', ...
-					mfilename, Condition, obj.Info.Nconditions);
-	return
+if obj.Info.Nconditions > 1
+	if ~between(Condition, 1, obj.Info.Nconditions)
+		warning('%s: Condition %d not within bounds (Nconditions: %d)', ...
+						mfilename, Condition, obj.Info.Nconditions);
+		return
+	end
 end
 
 % get the sweeps for the indicated Condition
 sinfo = obj.Info.Stimulus(Condition);		
 sweeplist = obj.GetSweepListForCondition(Condition);
 [sampleinterval, t1, t2] = obj.GetResampledTrace(sweeplist, Decifactor);
-htmp = plotAllTraces(	t2, ...
-								'Stimulus', 0.1*normalize(t1{1}), ...
-								'SampleInterval', sampleinterval, ...
-								'Colors', obj.PlotOpts.Color, ...
-								'Scale', obj.PlotOpts.Scale);
-titlestr =	{	obj.BaseName, ...
-					obj.Info.Animal, ...
-					[sinfo.AuditoryStimulus ' ' sinfo.OtherStimulus] ...
-				};
-title(titlestr)
+if ~iscell(t2)
+	if ~isempty(t2)
+		t2 = {t2};
+		% assume (!) that t1 is also not a cell
+		t1 = {t1};
+	end
+end
+if ~isempty(t2)
+	htmp = plotAllTraces(	t2, ...
+									'Stimulus', 0.1*normalize(t1{1}), ...
+									'SampleInterval', sampleinterval, ...
+									'Colors', obj.PlotOpts.Color, ...
+									'Scale', obj.PlotOpts.Scale);
+	titlestr =	{	obj.BaseName, ...
+						obj.Info.Animal, ...
+						[sinfo.AuditoryStimulus ' ' sinfo.OtherStimulus] ...
+					};
+	title(titlestr)
+else
+	error('%s: no traces!', mfilename);
+end
 
 if nargout
 	h = htmp;
