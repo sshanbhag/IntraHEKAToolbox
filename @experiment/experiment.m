@@ -78,7 +78,7 @@ classdef experiment < handle
 			end
 			
 			% little trick to get path and base name in canonical form
-			[base_path, base_name, ext] = fileparts(fullfile(base_path, base_name));
+			[base_path, base_name, ext] = fileparts(fullfile(base_path, base_name)); %#ok<ASGLU>
 			% otherwise, construct file names...
 			obj.Sweeps = sweep;
 			obj.Nsweeps = [];
@@ -194,7 +194,6 @@ classdef experiment < handle
 				obj.Sweeps(n).fp1 = dsc.trace1_fp(n);
 				obj.Sweeps(n).fp2 = dsc.trace2_fp(n);
 			end
-			
 		end
 		%------------------------------------------------------------------------
 		
@@ -210,22 +209,15 @@ classdef experiment < handle
 				warning('%s: object not initialized', mfilename);
 				return
 			end
-			
 			if any(~between(sweeplist, 1, obj.Nsweeps))
 				error('%s: sweeplist out of bounds (Nsweeps = %d)', mfilename, obj.Nsweeps);
 			end
-			
 			datfile = fullfile(obj.BasePath, obj.DATfilename);
-			
 			ns = length(sweeplist);
-
 			if ns == 1
 				[trace1, trace2] = obj.Sweeps(sweeplist).ReadData(datfile);
-				trace1 = trace1;
-				trace2 = trace2;
 				return
 			end
-			
 			trace1 = cell(ns, 1);
 			trace2 = cell(ns, 1);
 			for n = 1:length(sweeplist)
@@ -263,7 +255,6 @@ classdef experiment < handle
 				trace2 = obj.Info.Scale(2) .* trace2 ./ obj.Info.Gain(2);
 				return
 			end
-			
 			trace1 = cell(ns, 1);
 			trace2 = cell(ns, 1);
 			for n = 1:length(sweeplist)
@@ -282,21 +273,17 @@ classdef experiment < handle
 		% returns [rate, trace1, trace2], where trace1 is usually the stimulus, 
 		% and trace2 is the electrode data. rate is new sampling rate
 		%------------------------------------------------------------------------
-		
 			% check decimation factor
 			if decifactor < 1
 				error('%s: decifactor must be integer >= 1 (decifactor = %d)', mfilename, decifactor);
 			end
-			
 			% get the trace(s) in raw format
 			[trace1, trace2] = obj.GetTrace(sweeplist);
-			
 			% if decifactor == 1, nothing to do!
 			if decifactor == 1
 				rate = obj.Sweeps(sweeplist(1)).Rate;
 				return
 			end
-			
 			% # of sweeps
 			ns = length(sweeplist);
 			% determine original sample rate - this is a bit of kludge, under
@@ -309,7 +296,6 @@ classdef experiment < handle
 			% use the lowest value of the found rates (actually, sample intervals,
 			% in seconds) and multiply by decifactor to get the new rate
 			rate = min(tmprate) * decifactor;
-
 			% do the actual decimation
 			if ns == 1
 				trace1 = decimate(trace1, decifactor);
@@ -331,13 +317,11 @@ classdef experiment < handle
 		% set stimulus information
 		% apply log info to sweeps
 		%------------------------------------------------------------------------
-
 			% make sure object is initialized
 			if ~obj.isInitialized
 				warning('%s: object not initialized', mfilename);
 				return
 			end
-			
 			% first, need to go through and combine the year, month, day unit fields
 			nLog = length(logData);
 			unitNames = cell(nLog, 1);
@@ -346,17 +330,19 @@ classdef experiment < handle
 				unitNames{l} = sprintf('%s-%s-%s-%s', L.year, L.month, L.day, L.unit_number);
 			end
 			% then use this to find matches
-			logMatches = find(strcmpi(obj.BaseName, unitNames))
+			logMatches = find(strcmpi(obj.BaseName, unitNames));
 			nMatches = length(logMatches);
-			
 			if nMatches == 0
 				% if no matches found, warn user
 				warning('nMatches == 0!');
 				return
 			else
+				% feedback on cmd line
+				fprintf('Matches in log file\n');
+				fprintf('\t%d\n', logMatches);
 				% set animal and depth information
 				obj.Info.Animal = logData(logMatches(1)).animal;
-				obj.Info.Depth = str2num(logData(logMatches(1)).cell_depth);
+				obj.Info.Depth = str2num(logData(logMatches(1)).cell_depth); %#ok<*ST2NM>
 				obj.Info.Nconditions = nMatches;
 				% then, build Stimulus information struct array
 				Stimulus = repmat(	struct(	'TrialStart', [], ...
@@ -388,22 +374,17 @@ classdef experiment < handle
 		%------------------------------------------------------------------------
 		% returns average trace for specific Condition
 		%------------------------------------------------------------------------
-
 			% make sure object is initialized
 			if ~obj.CheckInitAndCondition(Condition)
 				error('%s: Condition %d not found or class is not initialized', ...
 								mfilename, Condition);
 			end
-			
-			DESPIKE = 0;
-			
 			% check input args
+			DESPIKE = 0;
 			optargin = size(varargin,2);
-			stdargin = nargin - optargin;
-
+% 			stdargin = nargin - optargin;
 			if optargin
 				% parse varargin args
-				errFlag = 0;
 				n = 1;
 				while n < optargin
 					if ischar(varargin{n})
@@ -414,23 +395,19 @@ classdef experiment < handle
 					end
 				end
 			end
-			
 			% get the sweeps for the indicated Condition
 			sinfo = obj.GetStimulusForCondition(Condition);		
 			sweeplist = obj.GetSweepListForCondition(Condition);
 			[trace1, trace2] = obj.GetTrace(sweeplist);
-			
 			% store first trace1 data, then clear trace1 to save space
 			t1 = trace1{1};
 			clear trace1
-			
 			% despike traces if needed
 			if DESPIKE
 				for s = 1:length(sweeplist)
 					trace2{s} = deSpike(trace2{s}, obj.Sweeps(sweeplist(s)).Rate);
 				end
 			end
-			
 			% compute mean of trace2 cell array
 			t2avg = mean(cell2mat(trace2'), 2);
 			t2std = std(cell2mat(trace2'), 0, 2);
@@ -444,13 +421,11 @@ classdef experiment < handle
 		%------------------------------------------------------------------------
 		% Returns trace lengths for a given condition
 		%------------------------------------------------------------------------
-		
 			% make sure object is initialized
 			if ~obj.CheckInitAndCondition(Condition)
 				tlen = [];
 				return
 			end
-			
 			% get the sweeps for the indicated Condition
 			sinfo = obj.GetStimulusForCondition(Condition);		
 			sweeplist = obj.GetSweepListForCondition(Condition);
@@ -468,7 +443,6 @@ classdef experiment < handle
 		%------------------------------------------------------------------------
 		% returns sweep list (indices) for given Condition
 		%------------------------------------------------------------------------
-
 			% make sure object is initialized
 			if ~obj.CheckInitAndCondition(Condition)
 				sweeplist = [];
@@ -486,7 +460,6 @@ classdef experiment < handle
 		%------------------------------------------------------------------------
 		% Method to get Stimulus information for specific condition
 		%------------------------------------------------------------------------
-			
 			% make sure object is initialized
 			if ~obj.CheckInitAndCondition(Condition)
 				s = [];
@@ -596,13 +569,9 @@ classdef experiment < handle
 			else
 				obj.Nstatistics = obj.Nstatistics + 1;
 			end
-			
 			obj.Statistics(obj.Nstatistics) = statistic(Statname, Statvals);
-			
-			
 			statIndex = obj.Nstatistics;
 			statObj = obj.Statistics(obj.Nstatistics);
-			
 			return
 		end
 		%------------------------------------------------------------------------
@@ -641,7 +610,7 @@ classdef experiment < handle
 			end
 			
 			if any(namematches)
-				statIndex = find(namematches)
+				statIndex = find(namematches);
 				if nargout == 2
 					nmatches = length(statIndex);
 					for n = 1:nmatches
