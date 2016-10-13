@@ -48,17 +48,14 @@ classdef experiment < handle
 	end
 	
 	methods
-		
 		%------------------------------------------------------------------------
 		%------------------------------------------------------------------------
 		% Constructor
 		%------------------------------------------------------------------------
 		function obj = experiment(base_path, base_name, cmdstr)
-			
 			% default PlotOpts
 			obj.PlotOpts.Color = 'b';
 			obj.PlotOpts.Scale = 10;
-			
 			% if no arguments given, return an "empty" instance for most 
 			% properties/values
 			if nargin == 0
@@ -113,14 +110,12 @@ classdef experiment < handle
 		% must be called before doing most of the useful things in the 
 		% experiment object.  
 		%------------------------------------------------------------------------
-			
 			% check if BaseName is set/defined
 			if isempty(obj.BaseName)
 				% if not, throw warning and return
 				warning('%s: no base_name defined!', mfilename)
 				return
 			end
-			
 			% make local versions of full file names
 			datfile = fullfile(obj.BasePath, obj.DATfilename);
 			pgffile = fullfile(obj.BasePath, obj.PGFfilename);
@@ -136,7 +131,6 @@ classdef experiment < handle
 				warning('%s: pul file %s not found', mfilename, pulfile);
 				return
 			end
-			
 			%----------------------------------------------------
 			% read in various datums
 			%----------------------------------------------------
@@ -145,12 +139,10 @@ classdef experiment < handle
 			% read info from pul file
 			obj.PUL = struct('tr', [], 'rr', []);
 			[obj.PUL.tr, obj.PUL.rr] = readPUL(pulfile);
-				
 			%----------------------------------------------------
 			% build sweeps
 			%----------------------------------------------------
 			obj.BuildSweeps;
-			
 			% set the isInitialized property to 1 (true)
 			obj.isInitialized = 1;
 		end
@@ -164,19 +156,15 @@ classdef experiment < handle
 		% This is usually called by the experiment.Initialize() method, but
 		% can be called independently if you know what you're doing...
 		%------------------------------------------------------------------------
-		
 			% use buildDSC function to get sweep information
 			dsc = buildDSC(fullfile(obj.BasePath, obj.DATfilename), obj.PGF, obj.PUL.rr);
-			
 			obj.Nsweeps = dsc.nsweeps;
 			obj.Info = struct('Scale', [], 'Gain', []);
 			obj.Info.Scale = [dsc.dfactor1, dsc.dfactor2];
-			
 			%%%%% Set Gain for channels
 			%%%%% note that this is arbitrary and is done to get the
 			%%%%% units to work out in Volts!!!!!!!!!!!!
 			obj.Info.Gain = [1 10];
-			
 			% allocate Sweeps object array
 			try
 				obj.Sweeps = repmat(sweep, obj.Nsweeps, 1);
@@ -185,7 +173,6 @@ classdef experiment < handle
 					obj.Sweeps(n) = sweep;
 				end
 			end
-			
 			% loop through # of sweeps, assign values to sweeps
 			for n = 1:obj.Nsweeps
 				obj.Sweeps(n).Nsamples = dsc.size(n);
@@ -309,6 +296,25 @@ classdef experiment < handle
 		end
 		%------------------------------------------------------------------------
 		
+		%------------------------------------------------------------------------
+		%------------------------------------------------------------------------
+		function [Fs, varargout] = GetSampleRate(obj)
+			% determine original sample rate - this is a bit of kludge, under
+			% the possibility that sample rate might vary across sweeps, 
+			% which is unlikely...  nevertheless...
+			tmprate = zeros(obj.Nsweeps, 1);
+			for n = 1:obj.Nsweeps
+				tmprate(n) = obj.Sweeps(n).Rate;
+			end
+			% use the lowest value of the found rates (actually, sample intervals,
+			% in seconds) 
+			Fs = 1/min(tmprate);
+			if nargout > 1
+				varargout{1} = unique(tmprate.^-1);
+			end
+		end
+		%------------------------------------------------------------------------
+		%------------------------------------------------------------------------
 		
 		%------------------------------------------------------------------------
 		%------------------------------------------------------------------------
@@ -522,13 +528,11 @@ classdef experiment < handle
 			DFACT = 10;
 			% threshold for finding start/end
 			THRESHOLD = 0.1;
-			
 			% make sure object is initialized
 			if ~obj.CheckInitAndCondition(Condition)
 				stim = [];
 				return
 			end
-			
 			% check inputs
 			switch length(varargin)
 				case 1
@@ -543,18 +547,14 @@ classdef experiment < handle
 						THRESHOLD = varargin{2};
 					end
 			end
-
 			% get the first stim trace for the indicated Condition
 			sinfo = obj.GetStimulusForCondition(Condition);
 			sweeplist = obj.GetSweepListForCondition(Condition);
 			[rate, trace1, trace2] = obj.GetResampledTrace(sweeplist(1), DFACT);
-			
 			% then, compute envelope using Hilbert transform and find start and end
 			env = abs(hilbert(1000*trace1));
-			
 			stim.start = 1000 * rate * find(env > THRESHOLD, 1, 'first');
 			stim.end = 1000 * rate * find(env > THRESHOLD, 1, 'last');
-
 		end
 		%------------------------------------------------------------------------
 		

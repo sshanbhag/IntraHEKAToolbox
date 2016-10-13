@@ -27,10 +27,12 @@ function [dout, spiket] = deSpike(din, Fs, varargin)
 % TO DO:
 %-----------------------------------------------------------------------------
 
-dt = 1 ./ Fs;
+
 %--------------------------------------------------------------
 % define a low-pass filter  
 %--------------------------------------------------------------
+% sample interval
+dt = 1 ./ Fs;
 % low-pass cutoff frequency
 fc = 250;
 % order of filter
