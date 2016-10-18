@@ -22,7 +22,7 @@ function varargout = HEKAview(varargin)
 
 % Edit the above text to modify the response to help HEKAview
 
-% Last Modified by GUIDE v2.5 13-Oct-2016 13:53:38
+% Last Modified by GUIDE v2.5 17-Oct-2016 14:21:54
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -554,7 +554,7 @@ function buttonMean_Callback(hObject, eventdata, handles)
 										handles.Values.CurrentCondition);
 	end
 	%-----------------------------------------------
-	% plot
+	% plot mean and error bars
 	%-----------------------------------------------
 	% get sampling rate
 	Fs = handles.E.GetSampleRate;
@@ -562,7 +562,7 @@ function buttonMean_Callback(hObject, eventdata, handles)
 	tvec = 1000 * ((1:length(sweep_mean)) - 1) * (1/Fs);
 	% create new fig
 	figure
-	% plot
+	% plot mean
 	plot(tvec, 1000*sweep_mean);
 	xlabel('Time (ms)')
 	ylabel('mV');
@@ -571,12 +571,18 @@ function buttonMean_Callback(hObject, eventdata, handles)
 								handles.Values.Sweeplist(1), ...
 								handles.Values.Sweeplist(end) );
 	title(fname, 'Interpreter', 'none');
-	yminmax = ylim
+	% plot error bars
+	hold on
+		plot(tvec, 1000*(sweep_mean + sweep_std), 'r');
+		plot(tvec, 1000*(sweep_mean - sweep_std), 'r');
+	hold off
+	% plot stimulus
+	yminmax = ylim;
 	stim2 = yminmax(2)+0.1*(normalize(stim) - 1);
 	hold on
 		plot(tvec, stim2, 'Color', 0.5 * [1 1 1])
 	hold off
-	ylim(yminmax);
+	ylim([yminmax(1) max(stim2)]);
 %--------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------- 
@@ -785,6 +791,3 @@ function Sweep_ctrl_CreateFcn(hObject, eventdata, handles)
 %-------------------------------------------------------------------------- 
 %*****************************************************************************
 %*****************************************************************************
-
-
-
