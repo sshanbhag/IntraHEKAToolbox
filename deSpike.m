@@ -13,12 +13,23 @@ function [dout, spiket] = deSpike(din, Fs, varargin)
 %	Fs		sample rate for din trace
 % 
 % 	Optional:
-% 	
+%		'SpikeThreshold', <spike threshold, volts>, default = -0.015
+% 		'DV1', <dV/dt onset threshold, volts/sec>, default = 2 
+% 		'DV2', <dV/dt offset threshold, volts/sec>, default = -1.5
+%		'SnipTime', <snip size for spline fit, msec>, default = 20
+%		'RefractoryTime', <spike refractory time, ms>, default = 2 ms
+% 
+%		Filtering options (see lpfilter command)
+%	 		'MeanTime', <time to compute mean, ms>, default = 1 ms
+%			'WinTime',	<time to add to start and end of snippet window, ms>, 
+%								default = 5 ms
+%
+%
 % Output Arguments:
 %	dout		despiked trace (at sampling rate of Fs)
 %	spiket	times of detected spikes (seconds)
 %------------------------------------------------------------------------
-% See also: filtfilt, butter
+% See also: filtfilt, butter, lpfilter
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
@@ -29,6 +40,7 @@ function [dout, spiket] = deSpike(din, Fs, varargin)
 %
 % Revisions:
 %	17 Oct 2016 (SJS): some cleanup
+%	31 Oct 2016 (SJS): adding options
 %------------------------------------------------------------------------
 % TO DO:
 %------------------------------------------------------------------------
@@ -36,11 +48,12 @@ function [dout, spiket] = deSpike(din, Fs, varargin)
 %--------------------------------------------------------------
 % settings
 %--------------------------------------------------------------
-% # of points to compute mean
-Meanpts = 10;
+% # of points to compute mean (based on time, ms)
+Meantime = 1;
+Meanpts = ms2samples(Meantime, Fs);
 % window size (ms) and points to add to start and end
-Winsize = 5;
-Winpts = ms2samples(Winsize, Fs);
+Wintime = 5;
+Winpts = ms2samples(Wintime, Fs);
 % threshold for spikes, V
 spikethresh = -0.015;
 % dV/dt onset, offset threshold, V/s
@@ -50,6 +63,48 @@ dvthresh2 = -1.50;
 sniptime = 20;
 % length of snip in samples
 snipwin = ms2samples(sniptime, Fs);
+% spike refractory period, ms
+refractorytime = 2;
+
+%--------------------------------------------------------------
+% process args
+%--------------------------------------------------------------
+if ~isempty(varargin)
+	optargs = length(varargin);
+	% parse varargin args
+	n = 1;
+	while n < optargs
+		switch upper(varargin{n})
+			case 'SPIKETHRESHOLD'
+				spikethresh = varargin{n+1};
+				n = n + 2;
+			case 'DV1'
+				dvthresh1 = varargin{n+1};
+				n = n + 2;
+			case 'DV2'
+				dvthresh2 = varargin{n+1};
+				n = n + 2;
+			case 'MEANTIME'
+				Meantime = varargin{n+1};
+				Meanpts = ms2samples(Meanpts, Fs);
+				n = n + 2;
+			case 'WINTIME'
+				Wintime = varargin{n+1};
+				Winpts = ms2samples(Winpts, Fs);
+				n = n + 2;
+			case 'SNIPTIME'
+				sniptime = varargin{n+1};
+				snipwin = ms2samples(sniptime, Fs);
+				n = n + 2;
+			case 'REFRACTORYTIME'
+				refractorytime = varargin{n+1};
+				n = n + 2;
+			otherwise
+				error('%s: bad arg %s', mfilename, varargin{n});
+		end
+	end
+end
+
 
 %--------------------------------------------------------------
 % filter data
@@ -62,12 +117,14 @@ fc = 250;
 % order of filter
 forder = 1;
 % then filter data
-fdata = lpfilter(din, Fs, fc, 'MeanPad', [Winpts Meanpts], 'FilterOrder', forder);
+fdata = lpfilter(din, Fs, fc, 'MeanPad', ...
+							[Winpts Meanpts], 'FilterOrder', forder);
 
 %--------------------------------------------------------------
 % find spike times (bins)
 %--------------------------------------------------------------
-spiket = spikeschmitt2(force_row(din) - spikethresh, 0, 2, Fs);
+spiket = spikeschmitt2(force_row(din) - spikethresh, ...
+					0, refractorytime, Fs);
 nspikes = length(spiket);
 
 %--------------------------------------------------------------

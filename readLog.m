@@ -21,7 +21,7 @@ function out = readLog(logfile, outfmt)
 % 		auditory_stim
 % 		other_stim
 % 		comments
-% 
+%		trial_dur
 % 	
 % 
 %-----------------------------------------------------------------------------
@@ -51,6 +51,7 @@ function out = readLog(logfile, outfmt)
 %	24 Apr 2012 (SJS):
 % 		- added output format selection
 %	9 Jun 2016 (SJS): updated comments, added check for failed fopen()
+%	31 Oct 2016 (SJS): updated for trial_dur (hold) time
 %-----------------------------------------------------------------------------
 % TO DO:
 %-----------------------------------------------------------------------------
