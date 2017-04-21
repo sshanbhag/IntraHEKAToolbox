@@ -97,7 +97,7 @@ fprintf('\n\n');
 txtscanstr = '';
 for n = 1:Nfields
 	tmpstruct.(fnames{n}) = [];
-	txtscanstr = [txtscanstr '%s'];
+	txtscanstr = [txtscanstr '%s']; %#ok<AGROW>
 end
 outstruct = repmat(tmpstruct, Ndatalines, 1);
 

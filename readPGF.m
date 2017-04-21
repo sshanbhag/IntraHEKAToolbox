@@ -72,7 +72,7 @@ pgf.number_children = fread(fp, 1, 'int32');
 for i = 1:pgf.number_children
 	size_of = 0;
 	tmp = fread(fp, STR_SIZE, 'char');
-	smr(i).file_name14 = char(tmp');
+	smr(i).file_name14 = char(tmp'); %#ok<*AGROW>
 	size_of = size_of + STR_SIZE;
 	tmp = fread(fp, STR_SIZE, 'char');
 	smr(i).entry_name14 = char(tmp');
@@ -222,7 +222,7 @@ for i = 1:pgf.number_children
 	smr(i).filler1 = fread(fp, 1, BYTE);
 	size_of = size_of + 1;
 	
-	buffer = fread(fp, pgf.tree_level(2) - size_of, BYTE); % ????????????????????
+	buffer = fread(fp, pgf.tree_level(2) - size_of, BYTE); %#ok<NASGU> % ????????????????????
 
 	smr(i).number_children = fread(fp, 1, 'int32');   % number of children - segments
 	% read stimulation records
@@ -244,7 +244,7 @@ for i = 1:pgf.number_children
 		size_of = size_of + 8;
 		smr(i).sgr(j).delta_t_increment = fread(fp, 1, 'double');
 		size_of = size_of + 8;
-		buffer = fread(fp, pgf.tree_level(3) - size_of, BYTE);
+		buffer = fread(fp, pgf.tree_level(3) - size_of, BYTE); %#ok<NASGU>
 		smr(i).sgr(j).number_children = fread(fp, 1, 'int32');
 	end
 

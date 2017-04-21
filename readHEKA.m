@@ -68,12 +68,12 @@ if ~exist('datfile', 'var')
 	end	
 end
 
-[dpath, dfile_base, dext] = fileparts(datfile);
+[dpath, dfile_base, ~] = fileparts(datfile);
 
 datname = [dfile_base '.dat'];
 pgfname = [dfile_base '.pgf'];
 pulname = [dfile_base '.pul'];
-dscname = [dfile_base '.dsc'];
+dscname = [dfile_base '.dsc']; %#ok<NASGU>
 
 % check files
 if ~exist(fullfile(dpath, pgfname), 'file')

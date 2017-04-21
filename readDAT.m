@@ -56,7 +56,7 @@ for i = 1:pul_rr.number_children
 		% for each sweep
 		 for k = 1:pul_rr.gr(i).srr(j).number_children
 
-			in_data(ns).size = pul_rr.gr(i).srr(j).swr(k).total_points;
+			in_data(ns).size = pul_rr.gr(i).srr(j).swr(k).total_points; %#ok<*AGROW>
 			in_data(ns).sweep = i + j + k;
 			in_data(ns).rate = pgf.smr(j).sample_interval;
 			in_data(ns).fname = datfile;
