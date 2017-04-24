@@ -426,6 +426,7 @@ classdef experiment < handle
 					[trace2{s}, st{s}] = deSpike(trace2{s}, ...
 														obj.Sweeps(sweeplist(s)).Rate);
 				end
+				
 			else
 				st = {};
 			end
@@ -437,7 +438,72 @@ classdef experiment < handle
 		
 		
 		%--------------------------------------------------------------------
-		%--------------------------------------------------------------------		
+		%--------------------------------------------------------------------
+		function [spiket, nspikes] = SpiketimesForCondition(obj, ...
+																		Condition, varargin)
+		%--------------------------------------------------------------------
+		% returns spike times for specific Condition
+		%--------------------------------------------------------------------
+			%-------------------------------------
+			% default settings
+			%-------------------------------------
+			% threshold for spikes, V
+			spikethresh = -0.015;
+			% spike refractory period, ms
+			refractorytime = 2;			
+			%-------------------------------------
+			% make sure object is initialized
+			%-------------------------------------
+			if ~obj.CheckInitAndCondition(Condition)
+				error('%s: Condition %d not found or class is not initialized', ...
+								mfilename, Condition);
+			end
+			%-------------------------------------
+			% check inputs
+			%-------------------------------------
+			if ~isempty(varargin)
+				optargs = length(varargin);
+				% parse varargin args
+				n = 1;
+				while n < optargs
+					switch upper(varargin{n})
+						case 'SPIKETHRESHOLD'
+							spikethresh = varargin{n+1};
+							n = n + 2;
+						case 'REFRACTORYTIME'
+							refractorytime = varargin{n+1};
+							n = n + 2;
+						otherwise
+							error('%s: bad arg %s', mfilename, varargin{n});
+					end
+				end
+			end
+			%-------------------------------------
+			% get the sweeps for the indicated Condition
+			%-------------------------------------
+			obj.GetStimulusForCondition(Condition);		
+			sweeplist = obj.GetSweepListForCondition(Condition);
+			[~, traces] = obj.GetTrace(sweeplist);
+			%-------------------------------------			
+			% get sample rate
+			%-------------------------------------
+			Fs = obj.GetSampleRate;
+			%-------------------------------------
+			% find spike times (convert bins to seconds)
+			%-------------------------------------			
+			spiket = cell(size(traces));
+			nspikes = zeros(size(traces));
+			for s = 1:length(sweeplist)
+				spiket{s} = spikeschmitt2(force_row(traces{s}) - spikethresh, ...
+													0, refractorytime, Fs);
+				spiket{s} = spiket{s} ./ Fs;
+				nspikes(s) = length(spiket{s});
+			end
+		end
+		%--------------------------------------------------------------------
+		
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		function tlen = GetTraceLengthForCondition(obj, Condition) 
 		%--------------------------------------------------------------------
 		% Returns trace lengths for a given condition
@@ -448,7 +514,7 @@ classdef experiment < handle
 				return
 			end
 			% get the sweeps for the indicated Condition
-			sinfo = obj.GetStimulusForCondition(Condition);		
+			sinfo = obj.GetStimulusForCondition(Condition);		 %#ok<NASGU>
 			sweeplist = obj.GetSweepListForCondition(Condition);
 			tlen = zeros(length(sweeplist), 1);
 			% get # of samples for each sweep

@@ -22,7 +22,7 @@ function varargout = HEKAview(varargin)
 
 % Edit the above text to modify the response to help HEKAview
 
-% Last Modified by GUIDE v2.5 17-Oct-2016 14:21:54
+% Last Modified by GUIDE v2.5 24-Apr-2017 19:03:49
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -184,8 +184,16 @@ function update_gui(hObj, handles)
 														gcf);
 		% set x axis (time) limits
 		xlim([H.Values.Tmin H.Values.Tmax]);
-		% turn off grid
-		grid off
+		% enable grid if Values.Grid is set
+		if H.Values.Grid
+			grid(H.axesMain, 'on');
+			drawnow
+			update_ui_val(H.Grid_ctrl, 1);
+		else
+			grid(H.axesMain, 'off');
+			drawnow
+			update_ui_val(H.Grid_ctrl, 0);
+		end
 	else
 		% SHOW SINGLE TRACE
 		% get trace data and plot them
@@ -200,11 +208,11 @@ function update_gui(hObj, handles)
 		xlim([H.Values.Tmin H.Values.Tmax]);
 		% enable grid if Values.Grid is set
 		if H.Values.Grid
-			grid on
+			grid(H.axesMain, 'on');
 			drawnow
 			update_ui_val(H.Grid_ctrl, 1);
 		else
-			grid off
+			grid(H.axesMain, 'off');
 			drawnow
 			update_ui_val(H.Grid_ctrl, 0);
 		end
@@ -531,7 +539,7 @@ function ExportSweeps_Callback(hObject, eventdata, handles)
 	%-----------------------------------------------
 	% export to MAT
 	%-----------------------------------------------
-	save(fname, 'Stimuli', 'Sweeps', 'Fs', '-MAT');
+	save(fullfile(pathname, filename), 'Stimuli', 'Sweeps', 'Fs', '-MAT');
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
@@ -583,6 +591,57 @@ function buttonMean_Callback(hObject, eventdata, handles)
 		plot(tvec, stim2, 'Color', 0.5 * [1 1 1])
 	hold off
 	ylim([yminmax(1) max(stim2)]);
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+% --- Executes on button press in buttonSpikeTimes.
+%--------------------------------------------------------------------------
+function buttonSpikeTimes_Callback(hObject, eventdata, handles)
+	%-----------------------------------------------
+	% default values
+	%-----------------------------------------------
+	% threshold for spikes, V
+	spikethresh = -0.015;
+	% spike refractory period, ms
+	refractorytime = 2;			
+	%-----------------------------------------------
+	% check init
+	%-----------------------------------------------
+	if ~handles.E.isInitialized
+		warning('%s: Not initialized!', mfilename);
+		return
+	end
+	%-----------------------------------------------
+	% get sweeps
+	%-----------------------------------------------
+	[spiket, nspikes] = ...
+					handles.E.SpiketimesForCondition( ...
+								handles.Values.CurrentCondition, ...
+								'SPIKETHRESHOLD', spikethresh, ...
+								'REFRACTORYTIME', refractorytime ); %#ok<ASGLU>
+			
+	%-----------------------------------------------
+	% plot rasters
+	%-----------------------------------------------
+	figure
+	rasterplot(spiket);
+	%-----------------------------------------------
+	% get output filename from user
+	%-----------------------------------------------
+	% build default file name
+	fname = sprintf('%s_%d-%d_spiketimes.mat', ...
+								fullfile(handles.Files.rawpath, ...
+												handles.Files.basename), ...
+								handles.Values.Sweeplist(1), ...
+								handles.Values.Sweeplist(end) );
+	[filename, pathname] = uiputfile('*.mat', 'Export As', fname);
+	% if user cancelled, abort
+	if isequal(filename, 0) || isequal(pathname, 0)
+		disp('Cancelled Spiketime File..')
+		return
+	else
+		save(fullfile(pathname, filename), 'spiket', 'nspikes', '-MAT');
+	end
 %--------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------- 
@@ -791,3 +850,6 @@ function Sweep_ctrl_CreateFcn(hObject, eventdata, handles)
 %-------------------------------------------------------------------------- 
 %*****************************************************************************
 %*****************************************************************************
+
+
+
