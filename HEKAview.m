@@ -516,30 +516,100 @@ function ExportSweeps_Callback(hObject, eventdata, handles)
 		warning('%s: Not initialized!', mfilename);
 		return
 	end
+	
 	%-----------------------------------------------
-	% get output filename from user
+	% export mode
 	%-----------------------------------------------
-	% build default file name
-	fname = sprintf('%s_%d-%d.mat', ...
-								fullfile(handles.Files.rawpath, ...
-												handles.Files.basename), ...
-								handles.Values.Sweeplist(1), ...
-								handles.Values.Sweeplist(end) );
-	[filename, pathname] = uiputfile('*.mat', 'Export As', fname);
-	% if user cancelled, abort
-	if isequal(filename, 0) || isequal(pathname, 0)
-		disp('Cancelled Load File..')
-		return
+	yn = uiyesno('Title', 'Export Sweeps', 'String', 'Export as MAT file');
+	if strcmpi(yn, 'Yes')
+		ExportAsMat = 1;
+	else
+		ExportAsMat = 0;
 	end
-	%-----------------------------------------------
-	% get sweeps, info
-	%-----------------------------------------------
-	[Stimuli, Sweeps] = handles.E.GetTrace(handles.Values.Sweeplist); %#ok<ASGLU>
-	Fs = handles.E.GetSampleRate; %#ok<NASGU>
-	%-----------------------------------------------
-	% export to MAT
-	%-----------------------------------------------
-	save(fullfile(pathname, filename), 'Stimuli', 'Sweeps', 'Fs', '-MAT');
+	
+	if ExportAsMat == 0
+		%-----------------------------------------------
+		% export as csv
+		%-----------------------------------------------
+		%-----------------------------------------------
+		% get output filename from user
+		%-----------------------------------------------
+		% build default file name
+		fname = sprintf('%s_%d-%d.csv', ...
+									fullfile(handles.Files.rawpath, ...
+													handles.Files.basename), ...
+									handles.Values.Sweeplist(1), ...
+									handles.Values.Sweeplist(end) );
+		[filename, pathname] = uiputfile('*.csv', 'Export As Text File', fname);
+		% if user cancelled, abort
+		if isequal(filename, 0) || isequal(pathname, 0)
+			disp('Cancelled Export File..')
+			return
+		end
+		%-----------------------------------------------
+		% get sweeps, info
+		%-----------------------------------------------
+		[Stimuli, Sweeps] = handles.E.GetTrace(handles.Values.Sweeplist); %#ok<ASGLU>
+		Fs = handles.E.GetSampleRate; %#ok<NASGU>
+		nStimuli = length(Stimuli);
+		nSweeps = length(Sweeps);
+		
+		if nStimuli ~= nSweeps
+			error('%s: mismatch in sweeps and stimuli', mfilename);
+		end
+		
+		audstim = handles.AuditoryStim_text.String;
+		otherstim = handles.OtherStim_text.String;
+		comments = handles.Comments_text.String;
+		
+		%-----------------------------------------------
+		% export to CSV
+		%-----------------------------------------------
+		
+		fp = fopen(fullfile(pathname, filename), 'wt');
+		fprintf(fp, 'AuditoryStim:,%s,\n', audstim);
+		fprintf(fp, 'OtherStim:,%s,\n', otherstim);
+		fprintf(fp, 'Comments:,%s,\n', comments);
+		fprintf(fp, 'SampleRate:,%f,\n', Fs);
+		
+		fprintf(fp, 'Data:,\n');
+		
+		for n = 1:length(Sweeps{1})
+			for s = 1:nSweeps
+				fprintf(fp, '%f,%f,', Stimuli{s}(n), Sweeps{s}(n));
+			end
+			fprintf(fp, '\n');
+		end
+		fclose(fp);
+	else
+		%-----------------------------------------------
+		% export as MAT
+		%-----------------------------------------------
+		%-----------------------------------------------
+		% get output filename from user
+		%-----------------------------------------------
+		% build default file name
+		fname = sprintf('%s_%d-%d.mat', ...
+									fullfile(handles.Files.rawpath, ...
+													handles.Files.basename), ...
+									handles.Values.Sweeplist(1), ...
+									handles.Values.Sweeplist(end) );
+		[filename, pathname] = uiputfile('*.mat', 'Export As', fname);
+		% if user cancelled, abort
+		if isequal(filename, 0) || isequal(pathname, 0)
+			disp('Cancelled Export File..')
+			return
+		end
+		%-----------------------------------------------
+		% get sweeps, info
+		%-----------------------------------------------
+		[Stimuli, Sweeps] = handles.E.GetTrace(handles.Values.Sweeplist); %#ok<ASGLU>
+		Fs = handles.E.GetSampleRate; %#ok<NASGU>
+		%-----------------------------------------------
+		% export to MAT
+		%-----------------------------------------------
+		save(fullfile(pathname, filename), 'Stimuli', 'Sweeps', 'Fs', '-MAT');
+	end
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
