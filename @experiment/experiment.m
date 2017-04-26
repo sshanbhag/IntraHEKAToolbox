@@ -1,18 +1,18 @@
-%-----------------------------------------------------------------------------
+%---------------------------------------------------------------------
 % experiment
-%-----------------------------------------------------------------------------
+%---------------------------------------------------------------------
 % IntraHEKA Toolbox
 % Class Definition
-%-----------------------------------------------------------------------------
+%---------------------------------------------------------------------
 % 
-%-----------------------------------------------------------------------------
+%---------------------------------------------------------------------
 % See also: sweep (class), readPGF, readPUL, readHEKA, readDAT
-%-----------------------------------------------------------------------------
+%---------------------------------------------------------------------
 
-%-----------------------------------------------------------------------------
+%---------------------------------------------------------------------
 % Sharad J. Shanbhag
 % sshanbhag@neomed.edu
-%-----------------------------------------------------------------------------
+%---------------------------------------------------------------------
 % Created: 12 April, 2012 (SJS)
 %
 % Revisions:
@@ -24,9 +24,9 @@
 %	4 May 2012 (SJS):
 % 	 -	added Statistics property to store statistic objects
 % 
-%-----------------------------------------------------------------------------
+%---------------------------------------------------------------------
 % TO DO:
-%-----------------------------------------------------------------------------
+%---------------------------------------------------------------------
 
 classdef experiment < handle
 	properties
@@ -48,17 +48,14 @@ classdef experiment < handle
 	end
 	
 	methods
-		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		% Constructor
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		function obj = experiment(base_path, base_name, cmdstr)
-			
 			% default PlotOpts
 			obj.PlotOpts.Color = 'b';
 			obj.PlotOpts.Scale = 10;
-			
 			% if no arguments given, return an "empty" instance for most 
 			% properties/values
 			if nargin == 0
@@ -78,7 +75,8 @@ classdef experiment < handle
 			end
 			
 			% little trick to get path and base name in canonical form
-			[base_path, base_name, ext] = fileparts(fullfile(base_path, base_name)); %#ok<ASGLU>
+			[base_path, base_name, ext] = fileparts(fullfile(base_path, ...
+																base_name)); %#ok<ASGLU>
 			% otherwise, construct file names...
 			obj.Sweeps = sweep;
 			obj.Nsweeps = [];
@@ -99,28 +97,27 @@ classdef experiment < handle
 					case 'INITIALIZE'
 						obj.Initialize;
 					otherwise
-						warning('%s: unknown command %s', mfilename, upper(cmdstr));
+						warning('%s: unknown command %s', mfilename, ...
+											upper(cmdstr));
 				end
 			end
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		function Initialize(obj)
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		% initialize object (read in data)
 		% must be called before doing most of the useful things in the 
 		% experiment object.  
-		%------------------------------------------------------------------------
-			
+		%--------------------------------------------------------------------
 			% check if BaseName is set/defined
 			if isempty(obj.BaseName)
 				% if not, throw warning and return
 				warning('%s: no base_name defined!', mfilename)
 				return
 			end
-			
 			% make local versions of full file names
 			datfile = fullfile(obj.BasePath, obj.DATfilename);
 			pgffile = fullfile(obj.BasePath, obj.PGFfilename);
@@ -136,7 +133,6 @@ classdef experiment < handle
 				warning('%s: pul file %s not found', mfilename, pulfile);
 				return
 			end
-			
 			%----------------------------------------------------
 			% read in various datums
 			%----------------------------------------------------
@@ -145,38 +141,33 @@ classdef experiment < handle
 			% read info from pul file
 			obj.PUL = struct('tr', [], 'rr', []);
 			[obj.PUL.tr, obj.PUL.rr] = readPUL(pulfile);
-				
 			%----------------------------------------------------
 			% build sweeps
 			%----------------------------------------------------
 			obj.BuildSweeps;
-			
 			% set the isInitialized property to 1 (true)
 			obj.isInitialized = 1;
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		function BuildSweeps(obj)
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		% builds the Sweeps object array property.  
 		% This is usually called by the experiment.Initialize() method, but
 		% can be called independently if you know what you're doing...
-		%------------------------------------------------------------------------
-		
+		%--------------------------------------------------------------------
 			% use buildDSC function to get sweep information
-			dsc = buildDSC(fullfile(obj.BasePath, obj.DATfilename), obj.PGF, obj.PUL.rr);
-			
+			dsc = buildDSC(fullfile(obj.BasePath, obj.DATfilename), ...
+															obj.PGF, obj.PUL.rr);
 			obj.Nsweeps = dsc.nsweeps;
 			obj.Info = struct('Scale', [], 'Gain', []);
 			obj.Info.Scale = [dsc.dfactor1, dsc.dfactor2];
-			
 			%%%%% Set Gain for channels
 			%%%%% note that this is arbitrary and is done to get the
 			%%%%% units to work out in Volts!!!!!!!!!!!!
 			obj.Info.Gain = [1 10];
-			
 			% allocate Sweeps object array
 			try
 				obj.Sweeps = repmat(sweep, obj.Nsweeps, 1);
@@ -185,7 +176,6 @@ classdef experiment < handle
 					obj.Sweeps(n) = sweep;
 				end
 			end
-			
 			% loop through # of sweeps, assign values to sweeps
 			for n = 1:obj.Nsweeps
 				obj.Sweeps(n).Nsamples = dsc.size(n);
@@ -195,16 +185,16 @@ classdef experiment < handle
 				obj.Sweeps(n).fp2 = dsc.trace2_fp(n);
 			end
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		function [trace1, trace2] = GetRawTrace(obj, sweeplist)
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		% get raw (unscaled) trace(s)
 		% returns [trace1, trace2], where trace1 is usually the stimulus, 
 		% and trace2 is the electrode data
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			if ~obj.isInitialized
 				warning('%s: object not initialized', mfilename);
 				return
@@ -226,23 +216,24 @@ classdef experiment < handle
 				trace2{n} = trace2{n};
 			end
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		function [trace1, trace2] = GetTrace(obj, sweeplist)
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		% get scaled trace(s)
 		% returns [trace1, trace2], where trace1 is usually the stimulus, 
 		% and trace2 is the electrode data
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			if ~obj.isInitialized
 				warning('%s: object not initialized', mfilename);
 				return
 			end
 			
 			if any(~between(sweeplist, 1, obj.Nsweeps))
-				error('%s: sweeplist out of bounds (Nsweeps = %d)', mfilename, obj.Nsweeps);
+				error('%s: sweeplist out of bounds (Nsweeps = %d)', ...
+									mfilename, obj.Nsweeps);
 			end
 			
 			datfile = fullfile(obj.BasePath, obj.DATfilename);
@@ -263,19 +254,21 @@ classdef experiment < handle
 				trace2{n} = obj.Info.Scale(2) .* trace2{n} ./ obj.Info.Gain(2);
 			end
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
-		function [rate, trace1, trace2] = GetResampledTrace(obj, sweeplist, decifactor)
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		function [rate, trace1, trace2] = GetResampledTrace(obj, ...
+																	sweeplist, decifactor)
+		%--------------------------------------------------------------------
 		% get scaled and resampled trace(s)
 		% returns [rate, trace1, trace2], where trace1 is usually the stimulus, 
 		% and trace2 is the electrode data. rate is new sampling rate
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			% check decimation factor
 			if decifactor < 1
-				error('%s: decifactor must be integer >= 1 (decifactor = %d)', mfilename, decifactor);
+				error('%s: decifactor must be integer >= 1 (decifactor = %d)', ...
+													mfilename, decifactor);
 			end
 			% get the trace(s) in raw format
 			[trace1, trace2] = obj.GetTrace(sweeplist);
@@ -293,8 +286,9 @@ classdef experiment < handle
 			for n = 1:ns
 				tmprate(n) = obj.Sweeps(sweeplist(n)).Rate;
 			end
-			% use the lowest value of the found rates (actually, sample intervals,
-			% in seconds) and multiply by decifactor to get the new rate
+			% use the lowest value of the found rates (actually, sample
+			% intervals, in seconds) and multiply by decifactor to get the new
+			% rate
 			rate = min(tmprate) * decifactor;
 			% do the actual decimation
 			if ns == 1
@@ -307,27 +301,48 @@ classdef experiment < handle
 				end
 			end
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		function [Fs, varargout] = GetSampleRate(obj)
+			% determine original sample rate - this is a bit of kludge, under
+			% the possibility that sample rate might vary across sweeps, 
+			% which is unlikely...  nevertheless...
+			tmprate = zeros(obj.Nsweeps, 1);
+			for n = 1:obj.Nsweeps
+				tmprate(n) = obj.Sweeps(n).Rate;
+			end
+			% use the lowest value of the found rates (actually, sample
+			% intervals, in seconds)
+			Fs = 1/min(tmprate);
+			if nargout > 1
+				varargout{1} = unique(tmprate.^-1);
+			end
+		end
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		function SetInfoFromLog(obj, logData)
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		% set stimulus information
 		% apply log info to sweeps
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			% make sure object is initialized
 			if ~obj.isInitialized
 				warning('%s: object not initialized', mfilename);
 				return
 			end
-			% first, need to go through and combine the year, month, day unit fields
+			% first, need to go through and combine the year, month, day unit
+			% fields
 			nLog = length(logData);
 			unitNames = cell(nLog, 1);
 			for l = 1:nLog
 				L = logData(l);
-				unitNames{l} = sprintf('%s-%s-%s-%s', L.year, L.month, L.day, L.unit_number);
+				unitNames{l} = sprintf('%s-%s-%s-%s', L.year, L.month, ...
+													L.day, L.unit_number);
 			end
 			% then use this to find matches
 			logMatches = find(strcmpi(obj.BaseName, unitNames));
@@ -356,7 +371,8 @@ classdef experiment < handle
 					L = logData(logMatches(n));
 					Stimulus(n).TrialStart = str2num(L.trial_start);
 					Stimulus(n).TrialEnd = str2num(L.trial_end);
-					Stimulus(n).Ntrials = 1 + Stimulus(n).TrialEnd - Stimulus(n).TrialStart;
+					Stimulus(n).Ntrials = 1 + Stimulus(n).TrialEnd - ...
+													Stimulus(n).TrialStart;
 					Stimulus(n).AuditoryStimulus = L.auditory_stim;
 					Stimulus(n).OtherStimulus = L.other_stim;
 					Stimulus(n).Comments = L.comments;
@@ -366,14 +382,15 @@ classdef experiment < handle
 			end
 			
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
-		function [t2avg, t2std, t1] = MeanTraceForCondition(obj, Condition, varargin)
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		function [t2avg, t2std, t1, st] = MeanTraceForCondition(obj, ...
+																		Condition, varargin)
+		%--------------------------------------------------------------------
 		% returns average trace for specific Condition
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			% make sure object is initialized
 			if ~obj.CheckInitAndCondition(Condition)
 				error('%s: Condition %d not found or class is not initialized', ...
@@ -396,7 +413,7 @@ classdef experiment < handle
 				end
 			end
 			% get the sweeps for the indicated Condition
-			sinfo = obj.GetStimulusForCondition(Condition);		
+			obj.GetStimulusForCondition(Condition);		
 			sweeplist = obj.GetSweepListForCondition(Condition);
 			[trace1, trace2] = obj.GetTrace(sweeplist);
 			% store first trace1 data, then clear trace1 to save space
@@ -404,30 +421,100 @@ classdef experiment < handle
 			clear trace1
 			% despike traces if needed
 			if DESPIKE
+				st = cell(size(trace2));
 				for s = 1:length(sweeplist)
-					trace2{s} = deSpike(trace2{s}, obj.Sweeps(sweeplist(s)).Rate);
+					[trace2{s}, st{s}] = deSpike(trace2{s}, ...
+														obj.Sweeps(sweeplist(s)).Rate);
 				end
+				
+			else
+				st = {};
 			end
 			% compute mean of trace2 cell array
 			t2avg = mean(cell2mat(trace2'), 2);
 			t2std = std(cell2mat(trace2'), 0, 2);
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------		
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		function [spiket, nspikes] = SpiketimesForCondition(obj, ...
+																		Condition, varargin)
+		%--------------------------------------------------------------------
+		% returns spike times for specific Condition
+		%--------------------------------------------------------------------
+			%-------------------------------------
+			% default settings
+			%-------------------------------------
+			% threshold for spikes, V
+			spikethresh = -0.015;
+			% spike refractory period, ms
+			refractorytime = 2;			
+			%-------------------------------------
+			% make sure object is initialized
+			%-------------------------------------
+			if ~obj.CheckInitAndCondition(Condition)
+				error('%s: Condition %d not found or class is not initialized', ...
+								mfilename, Condition);
+			end
+			%-------------------------------------
+			% check inputs
+			%-------------------------------------
+			if ~isempty(varargin)
+				optargs = length(varargin);
+				% parse varargin args
+				n = 1;
+				while n < optargs
+					switch upper(varargin{n})
+						case 'SPIKETHRESHOLD'
+							spikethresh = varargin{n+1};
+							n = n + 2;
+						case 'REFRACTORYTIME'
+							refractorytime = varargin{n+1};
+							n = n + 2;
+						otherwise
+							error('%s: bad arg %s', mfilename, varargin{n});
+					end
+				end
+			end
+			%-------------------------------------
+			% get the sweeps for the indicated Condition
+			%-------------------------------------
+			obj.GetStimulusForCondition(Condition);		
+			sweeplist = obj.GetSweepListForCondition(Condition);
+			[~, traces] = obj.GetTrace(sweeplist);
+			%-------------------------------------			
+			% get sample rate
+			%-------------------------------------
+			Fs = obj.GetSampleRate;
+			%-------------------------------------
+			% find spike times (convert bins to seconds)
+			%-------------------------------------			
+			spiket = cell(size(traces));
+			nspikes = zeros(size(traces));
+			for s = 1:length(sweeplist)
+				spiket{s} = spikeschmitt2(force_row(traces{s}) - spikethresh, ...
+													0, refractorytime, Fs);
+				spiket{s} = spiket{s} ./ Fs;
+				nspikes(s) = length(spiket{s});
+			end
+		end
+		%--------------------------------------------------------------------
+		
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		function tlen = GetTraceLengthForCondition(obj, Condition) 
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		% Returns trace lengths for a given condition
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			% make sure object is initialized
 			if ~obj.CheckInitAndCondition(Condition)
 				tlen = [];
 				return
 			end
 			% get the sweeps for the indicated Condition
-			sinfo = obj.GetStimulusForCondition(Condition);		
+			sinfo = obj.GetStimulusForCondition(Condition);		 %#ok<NASGU>
 			sweeplist = obj.GetSweepListForCondition(Condition);
 			tlen = zeros(length(sweeplist), 1);
 			% get # of samples for each sweep
@@ -435,14 +522,14 @@ classdef experiment < handle
 				tlen(t) = obj.Sweeps(sweeplist(t)).Nsamples;
 			end
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		function sweeplist = GetSweepListForCondition(obj, Condition) 
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		% returns sweep list (indices) for given Condition
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			% make sure object is initialized
 			if ~obj.CheckInitAndCondition(Condition)
 				sweeplist = [];
@@ -452,14 +539,14 @@ classdef experiment < handle
 			sinfo = obj.GetStimulusForCondition(Condition);		
 			sweeplist = sinfo.TrialStart : sinfo.TrialEnd;
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		function s = GetStimulusForCondition(obj, Condition)
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		% Method to get Stimulus information for specific condition
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			% make sure object is initialized
 			if ~obj.CheckInitAndCondition(Condition)
 				s = [];
@@ -468,15 +555,15 @@ classdef experiment < handle
 				s = obj.Info.Stimulus(Condition);
 			end
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		function out = CheckInitAndCondition(obj, Condition)
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		% internal method to check initialization status and validity of 
 		% Condition value
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			out = 0;
 			% make sure object is initialized
 			if ~obj.isInitialized
@@ -496,16 +583,16 @@ classdef experiment < handle
 				return
 			end
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------		
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------		
 		function stim = GetStimParamForCondition(obj, Condition, varargin) 
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		% Returns stimulus information for a given condition
 		% Note that these are parameters that are computed directly from the 
 		% stimulus trace and may be inaccurate!!!
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		%	Input Args:
 		% 		Condition		Experiment Condition ID #
 		% 
@@ -517,18 +604,16 @@ classdef experiment < handle
 		% 		stim	structure with fields:
 		%				start		stimulus start time (milliseconds)
 		%				end		stimulus end time (milliseconds)
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			% decimation factor
 			DFACT = 10;
 			% threshold for finding start/end
 			THRESHOLD = 0.1;
-			
 			% make sure object is initialized
 			if ~obj.CheckInitAndCondition(Condition)
 				stim = [];
 				return
 			end
-			
 			% check inputs
 			switch length(varargin)
 				case 1
@@ -543,30 +628,27 @@ classdef experiment < handle
 						THRESHOLD = varargin{2};
 					end
 			end
-
 			% get the first stim trace for the indicated Condition
-			sinfo = obj.GetStimulusForCondition(Condition);
+			obj.GetStimulusForCondition(Condition);
 			sweeplist = obj.GetSweepListForCondition(Condition);
-			[rate, trace1, trace2] = obj.GetResampledTrace(sweeplist(1), DFACT);
-			
-			% then, compute envelope using Hilbert transform and find start and end
+			[rate, trace1, ~] = obj.GetResampledTrace(sweeplist(1), DFACT);
+			% then, compute envelope using Hilbert transform and find start
+			% and end
 			env = abs(hilbert(1000*trace1));
-			
 			stim.start = 1000 * rate * find(env > THRESHOLD, 1, 'first');
 			stim.end = 1000 * rate * find(env > THRESHOLD, 1, 'last');
-
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------		
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------		
 		function [statIndex, statObj] = AddStatistic(obj, Statname, Statvals)
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		%	Input Args:
 		% 	Output Args:
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			if obj.Nstatistics == 0
 				obj.Nstatistics = 1;
 			else
@@ -577,16 +659,17 @@ classdef experiment < handle
 			statObj = obj.Statistics(obj.Nstatistics);
 			return
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------		
-		function [statIndex, statObj] = GetStatisticByName(obj, Statname, CompareMethod)
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------		
+		function [statIndex, statObj] = GetStatisticByName(obj, Statname, ...
+																				CompareMethod)
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		%	Input Args:
 		% 	Output Args:
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			if obj.Nstatistics == 0
 				statIndex = 0;
 				statObj = [];
@@ -594,7 +677,7 @@ classdef experiment < handle
 			end			
 
 			if ~exist('CompareMethod', 'var')
-				CompareMethod = 'STRCOMPI';
+				CompareMethod = 'STRCMPI';
 			end
 			
 			statnamelist = obj.GetStatisticNameList;
@@ -605,11 +688,14 @@ classdef experiment < handle
 				case 'STRCMPI'
 					namematches = strcmpi(Statname, statnamelist);
 				case 'STRNCMP'
-					namematches = strncmp(Statname, statnamelist, length(Statname));
+					namematches = strncmp(Statname, statnamelist, ...
+														length(Statname));
 				case 'STRNCMPI'
-					namematches = strncmpi(Statname, statnamelist, length(Statname));
+					namematches = strncmpi(Statname, statnamelist, ...
+														length(Statname));
 				otherwise
-					error('%s: unknown stat string compare method %s', mfilename, CompareMethod);
+					error('%s: unknown stat string compare method %s', ...
+																mfilename, CompareMethod);
 			end
 			
 			if any(namematches)
@@ -617,7 +703,7 @@ classdef experiment < handle
 				if nargout == 2
 					nmatches = length(statIndex);
 					for n = 1:nmatches
-						statObj(n) = obj.Statistics(statIndex(n));
+						statObj(n) = obj.Statistics(statIndex(n)); %#ok<AGROW>
 					end
 				end
 			else
@@ -627,16 +713,16 @@ classdef experiment < handle
 			
 			return
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------		
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------		
 		function statnames = GetStatisticNameList(obj)
-		%------------------------------------------------------------------------
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		%	Input Args:
 		% 	Output Args:
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 			if obj.Nstatistics == 0
 				statnames = {};
 				return
@@ -648,7 +734,7 @@ classdef experiment < handle
 			end
 			return
 		end
-		%------------------------------------------------------------------------
+		%--------------------------------------------------------------------
 		
 	end		%% END OF METHODS
 end		%% END OF CLASS DEFINITION

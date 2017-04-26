@@ -22,7 +22,7 @@ function varargout = HEKAview(varargin)
 
 % Edit the above text to modify the response to help HEKAview
 
-% Last Modified by GUIDE v2.5 12-Oct-2016 17:17:02
+% Last Modified by GUIDE v2.5 24-Apr-2017 19:03:49
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -149,8 +149,13 @@ function initialize_gui(fig_handle, handles, isreset)
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
 function update_gui(hObj, handles)
+	%----------------------------------------------------------
+	% select main plot axes
+	%----------------------------------------------------------
 	axes(handles.axesMain);
-	
+	%----------------------------------------------------------
+	% check if data obj is initialized and ready
+	%----------------------------------------------------------
 	if ~handles.E.isInitialized
 		warning('%s: Not initialized!', mfilename);
 		return
@@ -179,8 +184,16 @@ function update_gui(hObj, handles)
 														gcf);
 		% set x axis (time) limits
 		xlim([H.Values.Tmin H.Values.Tmax]);
-		% turn off grid
-		grid off
+		% enable grid if Values.Grid is set
+		if H.Values.Grid
+			grid(H.axesMain, 'on');
+			drawnow
+			update_ui_val(H.Grid_ctrl, 1);
+		else
+			grid(H.axesMain, 'off');
+			drawnow
+			update_ui_val(H.Grid_ctrl, 0);
+		end
 	else
 		% SHOW SINGLE TRACE
 		% get trace data and plot them
@@ -195,11 +208,11 @@ function update_gui(hObj, handles)
 		xlim([H.Values.Tmin H.Values.Tmax]);
 		% enable grid if Values.Grid is set
 		if H.Values.Grid
-			grid on
+			grid(H.axesMain, 'on');
 			drawnow
 			update_ui_val(H.Grid_ctrl, 1);
 		else
-			grid off
+			grid(H.axesMain, 'off');
 			drawnow
 			update_ui_val(H.Grid_ctrl, 0);
 		end
@@ -216,7 +229,9 @@ function update_gui(hObj, handles)
 															H.Settings.MeanTextColor);
 		end
 	end
+	%----------------------------------------------------------
 	% show stim start/end lines
+	%----------------------------------------------------------
 	if H.Values.PlotStimStartEnd
 		stiminfo = H.E.GetStimParamForCondition(H.Values.CurrentCondition);
 		% draw start line
@@ -316,6 +331,9 @@ function Ymax_ctrl_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
 function Condition_ctrl_Callback(hObject, eventdata, handles)
+	%----------------------------------------------------------
+	% make sure there's something there
+	%----------------------------------------------------------
 	if isempty(read_ui_str(hObject))
 		return
 	elseif ~handles.E.isInitialized
@@ -323,10 +341,10 @@ function Condition_ctrl_Callback(hObject, eventdata, handles)
 		fprintf('\n¡¡Please load data!!\n\n');
 		return
 	end
-	
 	handles.Values.CurrentCondition = read_ui_val(hObject);
-
+	%----------------------------------------------------------
 	% update Sweep list box
+	%----------------------------------------------------------
 	% first get the list of sweeps for current condition (and # of sweeps)
 	sweeplist = handles.E.GetSweepListForCondition( ...
 												handles.Values.CurrentCondition);
@@ -343,7 +361,6 @@ function Condition_ctrl_Callback(hObject, eventdata, handles)
 	set(handles.Sweep_ctrl, 'String', cstr);		
 	% update Sweep control to current sweep (all sweeps)
 	update_ui_val(handles.Sweep_ctrl, handles.Values.Nsweeps + 1);
-
 	% get # of points for this condition
 	npts = min(handles.E.GetTraceLengthForCondition(...
 												handles.Values.CurrentCondition));
@@ -361,10 +378,10 @@ function Condition_ctrl_Callback(hObject, eventdata, handles)
 	update_ui_str(handles.Tmin_ctrl, handles.Values.Tmin); 
 	update_ui_str(handles.Tmax_ctrl, handles.Values.Tmax); 
 	update_gui(hObject, handles);
-
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
 
+%-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
 function Sweep_ctrl_Callback(hObject, eventdata, handles)
 	index = read_ui_val(hObject);
@@ -376,6 +393,7 @@ function Sweep_ctrl_Callback(hObject, eventdata, handles)
 	end
 	guidata(hObject, handles);
 	update_gui(hObject, handles);
+%-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
 
 %-------------------------------------------------------------------------- 
@@ -390,11 +408,8 @@ function Decimate_ctrl_Callback(hObject, eventdata, handles)
 		update_ui_str(hObject, handles.Values.Decifactor);
 		return
 	end
-		
 	handles.Values.Decifactor =  newval;
-	
 	guidata(hObject, handles);
-	
 	if handles.E.isInitialized
 		update_gui(hObject, handles);
 	end
@@ -452,40 +467,287 @@ function TraceMean_ctrl_Callback(hObject, eventdata, handles)
 function StimStartEnd_ctrl_Callback(hObject, eventdata, handles)
 	handles.Values.PlotStimStartEnd = read_ui_val(hObject);
 	guidata(hObject, handles);
-	
 	if handles.E.isInitialized
 		update_gui(hObject, handles);
 	end
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
 
-%-------------------------------------------------------------------------- 
-%--------------------------------------------------------------------------
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
 % BUTTONS
-%-------------------------------------------------------------------------- 
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
+
 %-------------------------------------------------------------------------- 
 % --- Executes on button press in calculate.
 %-------------------------------------------------------------------------- 
 function calculate_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------- 
+
 %-------------------------------------------------------------------------- 
 % --- Executes on button press in reset.
 %-------------------------------------------------------------------------- 
 function reset_Callback(hObject, eventdata, handles)
 	initialize_gui(gcbf, handles, true);
 %-------------------------------------------------------------------------- 
+
 %-------------------------------------------------------------------------- 
 % --- Executes on button press in debug.
 function debug_Callback(hObject, eventdata, handles)
 	keyboard
 %-------------------------------------------------------------------------- 
+
 %-------------------------------------------------------------------------- 
 % --- Executes on button press in buttonLoadData.
 function buttonLoadData_Callback(hObject, eventdata, handles)
 	LoadData(hObject, eventdata, handles);
 %-------------------------------------------------------------------------- 
+
+%-------------------------------------------------------------------------- 
+% --- Executes on button press in ExportSweeps.
+function ExportSweeps_Callback(hObject, eventdata, handles)
+	%-----------------------------------------------
+	% check init
+	%-----------------------------------------------
+	if ~handles.E.isInitialized
+		warning('%s: Not initialized!', mfilename);
+		return
+	end
+	%-----------------------------------------------
+	% export mode
+	%-----------------------------------------------
+	yn = uiyesno('Title', 'Export Sweeps', 'String', 'Export as MAT file');
+	if strcmpi(yn, 'Yes')
+		ExportAsMat = 1;
+	else
+		ExportAsMat = 0;
+	end
+	%-----------------------------------------------
+	% downsample?
+	%-----------------------------------------------
+% 	yn = uiyesno('Title', 'Downsample Sweeps', ...
+% 								'String', 'Downsample data for export');
+% 	if strcmpi(yn, 'Yes')
+% 		Fs = handles.E.GetSampleRate;
+% 		defaultval = Fs / read_ui_str(handles.Decimate_ctrl, 'n');
+% 		val = uiaskvalue('value', defaultval, ...
+% 					'valuetext', 'New sample rate', ...
+% 					'questiontext', sprintf('Original Sample Rate: %d Hz', Fs), ...
+% 	end
+	%-----------------------------------------------
+	% get sweeps, info
+	%-----------------------------------------------
+	[Stimuli, Sweeps] = handles.E.GetTrace(handles.Values.Sweeplist); 
+	Fs = handles.E.GetSampleRate; 
+	nStimuli = length(Stimuli);
+	nSweeps = length(Sweeps);
+		
+
+	if ExportAsMat == 0
+		%-----------------------------------------------
+		% export as csv
+		%-----------------------------------------------
+		%-----------------------------------------------
+		% get output filename from user
+		%-----------------------------------------------
+		% build default file name
+		fname = sprintf('%s_%d-%d.csv', ...
+									fullfile(handles.Files.rawpath, ...
+													handles.Files.basename), ...
+									handles.Values.Sweeplist(1), ...
+									handles.Values.Sweeplist(end) );
+		[filename, pathname] = uiputfile('*.csv', 'Export As Text File', fname);
+		% if user cancelled, abort
+		if isequal(filename, 0) || isequal(pathname, 0)
+			disp('Cancelled Export File..')
+			return
+		end
+
+		if nStimuli ~= nSweeps
+			error('%s: mismatch in sweeps and stimuli', mfilename);
+		end
+		
+		audstim = handles.AuditoryStim_text.String;
+		otherstim = handles.OtherStim_text.String;
+		comments = handles.Comments_text.String;
+		
+		%-----------------------------------------------
+		% export to CSV
+		%-----------------------------------------------
+		
+		fp = fopen(fullfile(pathname, filename), 'wt');
+		fprintf(fp, 'AuditoryStim:,%s,\n', audstim);
+		fprintf(fp, 'OtherStim:,%s,\n', otherstim);
+		fprintf(fp, 'Comments:,%s,\n', comments);
+		fprintf(fp, 'SampleRate:,%f,\n', Fs);
+		
+		fprintf(fp, 'Data:,\n');
+		
+		for n = 1:length(Sweeps{1})
+			for s = 1:nSweeps
+				fprintf(fp, '%f,%f,', Stimuli{s}(n), Sweeps{s}(n));
+			end
+			fprintf(fp, '\n');
+		end
+		fclose(fp);
+	else
+		%-----------------------------------------------
+		% export as MAT
+		%-----------------------------------------------
+		%-----------------------------------------------
+		% get output filename from user
+		%-----------------------------------------------
+		% build default file name
+		fname = sprintf('%s_%d-%d.mat', ...
+									fullfile(handles.Files.rawpath, ...
+													handles.Files.basename), ...
+									handles.Values.Sweeplist(1), ...
+									handles.Values.Sweeplist(end) );
+		[filename, pathname] = uiputfile('*.mat', 'Export As', fname);
+		% if user cancelled, abort
+		if isequal(filename, 0) || isequal(pathname, 0)
+			disp('Cancelled Export File..')
+			return
+		end
+		%-----------------------------------------------
+		% export to MAT
+		%-----------------------------------------------
+		save(fullfile(pathname, filename), 'Stimuli', 'Sweeps', 'Fs', '-MAT');
+	end
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+% --- Executes on button press in buttonMean.
+function buttonMean_Callback(hObject, eventdata, handles)
+	%-----------------------------------------------
+	% despike?
+	%-----------------------------------------------
+	yn = uiyesno('title', 'Sweep Mean', 'string', 'Remove Spikes?');
+	% get mean trace (without or with spikes)
+	if strcmpi(yn, 'yes')
+		disp('Removing Spikes...');
+		[sweep_mean, sweep_std, stim] = ...
+										handles.E.MeanTraceForCondition( ...
+										handles.Values.CurrentCondition, ...
+										'NoSpikes');
+	else
+		[sweep_mean, sweep_std, stim] = ...
+										handles.E.MeanTraceForCondition( ...
+										handles.Values.CurrentCondition);
+	end
+	%-----------------------------------------------
+	% plot mean and error bars
+	%-----------------------------------------------
+	% get sampling rate
+	Fs = handles.E.GetSampleRate;
+	% time vector
+	tvec = 1000 * ((1:length(sweep_mean)) - 1) * (1/Fs);
+	% create new fig
+	figure
+	% plot mean
+	plot(tvec, 1000*sweep_mean);
+	xlabel('Time (ms)')
+	ylabel('mV');
+	fname = sprintf('%s_%d-%d.mat', ...
+								handles.Files.basename, ...
+								handles.Values.Sweeplist(1), ...
+								handles.Values.Sweeplist(end) );
+	title(fname, 'Interpreter', 'none');
+	% plot error bars
+	hold on
+		plot(tvec, 1000*(sweep_mean + sweep_std), 'r');
+		plot(tvec, 1000*(sweep_mean - sweep_std), 'r');
+	hold off
+	% plot stimulus
+	yminmax = ylim;
+	stim2 = yminmax(2)+0.1*(normalize(stim) - 1);
+	hold on
+		plot(tvec, stim2, 'Color', 0.5 * [1 1 1])
+	hold off
+	ylim([yminmax(1) max(stim2)]);
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+% --- Executes on button press in buttonSpikeTimes.
+%--------------------------------------------------------------------------
+function buttonSpikeTimes_Callback(hObject, eventdata, handles)
+	%-----------------------------------------------
+	% default values
+	%-----------------------------------------------
+	% threshold for spikes, V
+	spikethresh = -0.015;
+	% spike refractory period, ms
+	refractorytime = 2;			
+	%-----------------------------------------------
+	% check init
+	%-----------------------------------------------
+	if ~handles.E.isInitialized
+		warning('%s: Not initialized!', mfilename);
+		return
+	end
+	%-----------------------------------------------
+	% get sweeps
+	%-----------------------------------------------
+	[spiket, nspikes] = ...
+					handles.E.SpiketimesForCondition( ...
+								handles.Values.CurrentCondition, ...
+								'SPIKETHRESHOLD', spikethresh, ...
+								'REFRACTORYTIME', refractorytime ); %#ok<ASGLU>
+			
+	%-----------------------------------------------
+	% plot rasters
+	%-----------------------------------------------
+	figure
+	rasterplot(spiket);
+	%-----------------------------------------------
+	% get output filename from user
+	%-----------------------------------------------
+	% build default file name
+	fname = sprintf('%s_%d-%d_spiketimes.mat', ...
+								fullfile(handles.Files.rawpath, ...
+												handles.Files.basename), ...
+								handles.Values.Sweeplist(1), ...
+								handles.Values.Sweeplist(end) );
+	[filename, pathname] = uiputfile('*.mat', 'Export As', fname);
+	% if user cancelled, abort
+	if isequal(filename, 0) || isequal(pathname, 0)
+		disp('Cancelled Spiketime File..')
+		return
+	else
+		save(fullfile(pathname, filename), 'spiket', 'nspikes', '-MAT');
+	end
+%--------------------------------------------------------------------------
+
+%-------------------------------------------------------------------------- 
+function buttonLoadLogFile_Callback(hObject, eventdata, handles)
+	%-----------------------------------------------
+	% get file from user
+	% 	logpath = '/Users/sshanbhag/Work/Data/Mouse/IntracellularAmygdala/RawData';
+	% 	logfile = 'IntracellDataLog.csv';
+	% 	logname = fullfile(handles.Files.logpath, handles.Files.logfile);
+	%-----------------------------------------------
+	[filename, pathname] = uigetfile('*.csv', ...
+						'Select experiment log file', handles.Files.logpath);
+	% if user cancelled, abort
+	if isequal(filename, 0) || isequal(pathname, 0)
+		disp('Cancelled Load File..')
+		return
+	end	
+	handles.Files.logpath = pathname;
+	handles.Files.logfile = filename;
+	handles.Files.logname = fullfile(handles.Files.logpath, ...
+													handles.Files.logfile);
+	set(handles.textLogFile, 'String', handles.Files.logname);
+	guidata(hObject, handles);
+%-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
 
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
 
 
 %-------------------------------------------------------------------------- 
@@ -605,12 +867,10 @@ function Plot_Load_menu_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------- 
 function Plot_Save_menu_Callback(hObject, eventdata, handles)
 % 	[filename, pathname] = uiputfile('*.fig', 'Save plot as', handles.Files.rawpath);
-
 	tmpfile = [handles.Files.basename '-C' ...
 						num2str(handles.Values.CurrentCondition) '.fig'];
 	[filename, pathname] = uiputfile('*.fig', 'Save plot as', ...
 													fullfile(pwd, tmpfile));
-
 	if isequal(filename, 0) || isequal(pathname, 0)
 		disp('Cancelled Save Plot...')
 		return
@@ -622,31 +882,6 @@ function Plot_Save_menu_Callback(hObject, eventdata, handles)
 		saveas(h, fullfile(pathname, filename), 'fig');
 		close(h);
 	end
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-function buttonLoadLogFile_Callback(hObject, eventdata, handles)
-	%-----------------------------------------------
-	% get file from user
-% 		handles.Files.logpath = '/Users/sshanbhag/Work/Data/Mouse/IntracellularAmygdala/RawData';
-% 	handles.Files.logfile = 'IntracellDataLog.csv';
-% 	handles.Files.logname = fullfile(handles.Files.logpath, handles.Files.logfile);
-% 
-	%-----------------------------------------------
-	[filename, pathname] = uigetfile('*.csv', ...
-						'Select experiment log file', handles.Files.logpath);
-	% if user cancelled, abort
-	if isequal(filename, 0) || isequal(pathname, 0)
-		disp('Cancelled Load File..')
-		return
-	end	
-
-	handles.Files.logpath = pathname;
-	handles.Files.logfile = filename;
-	handles.Files.logname = fullfile(handles.Files.logpath, ...
-													handles.Files.logfile);
-	set(handles.textLogFile, 'String', handles.Files.logname);
-	guidata(hObject, handles);
-%-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
 
 
@@ -692,3 +927,6 @@ function Sweep_ctrl_CreateFcn(hObject, eventdata, handles)
 %-------------------------------------------------------------------------- 
 %*****************************************************************************
 %*****************************************************************************
+
+
+
