@@ -516,7 +516,6 @@ function ExportSweeps_Callback(hObject, eventdata, handles)
 		warning('%s: Not initialized!', mfilename);
 		return
 	end
-	
 	%-----------------------------------------------
 	% export mode
 	%-----------------------------------------------
@@ -526,7 +525,27 @@ function ExportSweeps_Callback(hObject, eventdata, handles)
 	else
 		ExportAsMat = 0;
 	end
-	
+	%-----------------------------------------------
+	% downsample?
+	%-----------------------------------------------
+% 	yn = uiyesno('Title', 'Downsample Sweeps', ...
+% 								'String', 'Downsample data for export');
+% 	if strcmpi(yn, 'Yes')
+% 		Fs = handles.E.GetSampleRate;
+% 		defaultval = Fs / read_ui_str(handles.Decimate_ctrl, 'n');
+% 		val = uiaskvalue('value', defaultval, ...
+% 					'valuetext', 'New sample rate', ...
+% 					'questiontext', sprintf('Original Sample Rate: %d Hz', Fs), ...
+% 	end
+	%-----------------------------------------------
+	% get sweeps, info
+	%-----------------------------------------------
+	[Stimuli, Sweeps] = handles.E.GetTrace(handles.Values.Sweeplist); 
+	Fs = handles.E.GetSampleRate; 
+	nStimuli = length(Stimuli);
+	nSweeps = length(Sweeps);
+		
+
 	if ExportAsMat == 0
 		%-----------------------------------------------
 		% export as csv
@@ -546,14 +565,7 @@ function ExportSweeps_Callback(hObject, eventdata, handles)
 			disp('Cancelled Export File..')
 			return
 		end
-		%-----------------------------------------------
-		% get sweeps, info
-		%-----------------------------------------------
-		[Stimuli, Sweeps] = handles.E.GetTrace(handles.Values.Sweeplist); %#ok<ASGLU>
-		Fs = handles.E.GetSampleRate; %#ok<NASGU>
-		nStimuli = length(Stimuli);
-		nSweeps = length(Sweeps);
-		
+
 		if nStimuli ~= nSweeps
 			error('%s: mismatch in sweeps and stimuli', mfilename);
 		end
@@ -600,11 +612,6 @@ function ExportSweeps_Callback(hObject, eventdata, handles)
 			disp('Cancelled Export File..')
 			return
 		end
-		%-----------------------------------------------
-		% get sweeps, info
-		%-----------------------------------------------
-		[Stimuli, Sweeps] = handles.E.GetTrace(handles.Values.Sweeplist); %#ok<ASGLU>
-		Fs = handles.E.GetSampleRate; %#ok<NASGU>
 		%-----------------------------------------------
 		% export to MAT
 		%-----------------------------------------------
