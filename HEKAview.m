@@ -22,7 +22,7 @@ function varargout = HEKAview(varargin)
 
 % Edit the above text to modify the response to help HEKAview
 
-% Last Modified by GUIDE v2.5 24-Apr-2017 19:03:49
+% Last Modified by GUIDE v2.5 28-Apr-2017 13:58:10
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -927,6 +927,3 @@ function Sweep_ctrl_CreateFcn(hObject, eventdata, handles)
 %-------------------------------------------------------------------------- 
 %*****************************************************************************
 %*****************************************************************************
-
-
-
