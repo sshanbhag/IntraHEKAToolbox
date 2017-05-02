@@ -22,7 +22,7 @@ function varargout = HEKAview(varargin)
 
 % Edit the above text to modify the response to help HEKAview
 
-% Last Modified by GUIDE v2.5 28-Apr-2017 13:58:10
+% Last Modified by GUIDE v2.5 01-May-2017 20:01:30
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -128,6 +128,14 @@ function initialize_gui(fig_handle, handles, isreset)
 	handles.Values.Grid = 1;
 	handles.Values.PlotMean = 1;
 	handles.Values.PlotStimStartEnd = 1;
+	% export settings
+	handles.Values.Export.RemoveSpikes = 0;
+	handles.Values.Export.ResampleData = 0;
+	handles.Values.Export.SampleRate = [];
+	handles.Values.Export.ExportFormat = 'MAT';
+	update_ui_val(handles.exportFormat_ctrl, 1);
+	disable_ui(handles.exportSampleRate_ctrl);
+	disable_ui(handles.ExportSampleRate_label);
 	% store settings
 	guidata(handles.figure1, handles);
 	% update ctrls
@@ -140,6 +148,12 @@ function initialize_gui(fig_handle, handles, isreset)
 	update_ui_val(handles.TraceMean_ctrl, handles.Values.PlotMean);
 	update_ui_val(handles.StimStartEnd_ctrl, ...
 									handles.Values.PlotStimStartEnd);
+	update_ui_val(handles.exportRemoveSpikes_ctrl, ...
+										handles.Values.Export.RemoveSpikes);
+	update_ui_val(handles.exportResample_ctrl, ...
+										handles.Values.Export.ResampleData);
+	update_ui_str(handles.exportSampleRate_ctrl, ...
+										handles.Values.Export.SampleRate);
 	% Update handles structure
 	guidata(handles.figure1, handles);
 %-------------------------------------------------------------------------- 
@@ -170,6 +184,8 @@ function update_gui(hObj, handles)
 	S = H.E.GetStimulusForCondition(H.Values.CurrentCondition);
 	update_ui_str(H.Animal_text, H.E.Info.Animal);
 	update_ui_str(H.Depth_text, H.E.Info.Depth);
+	update_ui_str(handles.SampleRate_text, ...
+								sprintf('%d', H.E.GetSampleRate));
 	update_ui_str(H.AuditoryStim_text, S.AuditoryStimulus);
 	update_ui_str(H.OtherStim_text, S.OtherStimulus);
 	update_ui_str(H.Comments_text, S.Comments);	
@@ -506,119 +522,6 @@ function buttonLoadData_Callback(hObject, eventdata, handles)
 	LoadData(hObject, eventdata, handles);
 %-------------------------------------------------------------------------- 
 
-%-------------------------------------------------------------------------- 
-% --- Executes on button press in ExportSweeps.
-function ExportSweeps_Callback(hObject, eventdata, handles)
-	%-----------------------------------------------
-	% check init
-	%-----------------------------------------------
-	if ~handles.E.isInitialized
-		warning('%s: Not initialized!', mfilename);
-		return
-	end
-	%-----------------------------------------------
-	% export mode
-	%-----------------------------------------------
-	yn = uiyesno('Title', 'Export Sweeps', 'String', 'Export as MAT file');
-	if strcmpi(yn, 'Yes')
-		ExportAsMat = 1;
-	else
-		ExportAsMat = 0;
-	end
-	%-----------------------------------------------
-	% downsample?
-	%-----------------------------------------------
-% 	yn = uiyesno('Title', 'Downsample Sweeps', ...
-% 								'String', 'Downsample data for export');
-% 	if strcmpi(yn, 'Yes')
-% 		Fs = handles.E.GetSampleRate;
-% 		defaultval = Fs / read_ui_str(handles.Decimate_ctrl, 'n');
-% 		val = uiaskvalue('value', defaultval, ...
-% 					'valuetext', 'New sample rate', ...
-% 					'questiontext', sprintf('Original Sample Rate: %d Hz', Fs), ...
-% 	end
-	%-----------------------------------------------
-	% get sweeps, info
-	%-----------------------------------------------
-	[Stimuli, Sweeps] = handles.E.GetTrace(handles.Values.Sweeplist); 
-	Fs = handles.E.GetSampleRate; 
-	nStimuli = length(Stimuli);
-	nSweeps = length(Sweeps);
-		
-
-	if ExportAsMat == 0
-		%-----------------------------------------------
-		% export as csv
-		%-----------------------------------------------
-		%-----------------------------------------------
-		% get output filename from user
-		%-----------------------------------------------
-		% build default file name
-		fname = sprintf('%s_%d-%d.csv', ...
-									fullfile(handles.Files.rawpath, ...
-													handles.Files.basename), ...
-									handles.Values.Sweeplist(1), ...
-									handles.Values.Sweeplist(end) );
-		[filename, pathname] = uiputfile('*.csv', 'Export As Text File', fname);
-		% if user cancelled, abort
-		if isequal(filename, 0) || isequal(pathname, 0)
-			disp('Cancelled Export File..')
-			return
-		end
-
-		if nStimuli ~= nSweeps
-			error('%s: mismatch in sweeps and stimuli', mfilename);
-		end
-		
-		audstim = handles.AuditoryStim_text.String;
-		otherstim = handles.OtherStim_text.String;
-		comments = handles.Comments_text.String;
-		
-		%-----------------------------------------------
-		% export to CSV
-		%-----------------------------------------------
-		
-		fp = fopen(fullfile(pathname, filename), 'wt');
-		fprintf(fp, 'AuditoryStim:,%s,\n', audstim);
-		fprintf(fp, 'OtherStim:,%s,\n', otherstim);
-		fprintf(fp, 'Comments:,%s,\n', comments);
-		fprintf(fp, 'SampleRate:,%f,\n', Fs);
-		
-		fprintf(fp, 'Data:,\n');
-		
-		for n = 1:length(Sweeps{1})
-			for s = 1:nSweeps
-				fprintf(fp, '%f,%f,', Stimuli{s}(n), Sweeps{s}(n));
-			end
-			fprintf(fp, '\n');
-		end
-		fclose(fp);
-	else
-		%-----------------------------------------------
-		% export as MAT
-		%-----------------------------------------------
-		%-----------------------------------------------
-		% get output filename from user
-		%-----------------------------------------------
-		% build default file name
-		fname = sprintf('%s_%d-%d.mat', ...
-									fullfile(handles.Files.rawpath, ...
-													handles.Files.basename), ...
-									handles.Values.Sweeplist(1), ...
-									handles.Values.Sweeplist(end) );
-		[filename, pathname] = uiputfile('*.mat', 'Export As', fname);
-		% if user cancelled, abort
-		if isequal(filename, 0) || isequal(pathname, 0)
-			disp('Cancelled Export File..')
-			return
-		end
-		%-----------------------------------------------
-		% export to MAT
-		%-----------------------------------------------
-		save(fullfile(pathname, filename), 'Stimuli', 'Sweeps', 'Fs', '-MAT');
-	end
-%--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % --- Executes on button press in buttonMean.
 function buttonMean_Callback(hObject, eventdata, handles)
@@ -836,6 +739,11 @@ function LoadData(hObject, eventdata, handles)
 	% update File string in Recording Info panel
 	%-----------------------------------------------
 	update_ui_str(handles.File_text, handles.Files.datname);
+	if isempty(read_ui_str(handles.exportSampleRate_ctrl))
+		update_ui_str(handles.exportSampleRate_ctrl, handles.E.GetSampleRate);
+	end
+	update_ui_str(handles.SampleRate_text, ...
+								sprintf('%.0f', handles.E.GetSampleRate));
 	%-----------------------------------------------
 	% Store changes, update gui
 	%-----------------------------------------------	
@@ -844,6 +752,263 @@ function LoadData(hObject, eventdata, handles)
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
 
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
+% --- Export Callbacks
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+% --- Executes on button press in ExportSweeps_ctrl.
+function ExportSweeps_ctrl_Callback(hObject, eventdata, handles)
+	%-----------------------------------------------
+	% check init
+	%-----------------------------------------------
+	if ~handles.E.isInitialized
+		warning('%s: Not initialized!', mfilename);
+		return
+	end
+	%-----------------------------------------------
+	% export mode
+	%-----------------------------------------------
+	fprintf('Exporting data as %s\n', handles.Values.Export.ExportFormat);
+	%-----------------------------------------------
+	% downsample? get sweeps, info
+	%-----------------------------------------------
+	Fs = handles.E.GetSampleRate;
+	handles.Values.Export.SampleRate
+	if handles.Values.Export.ResampleData && ...
+					(Fs ~= handles.Values.Export.SampleRate)
+		decifactor = round(handles.E.GetSampleRate / ...
+										handles.Values.Export.SampleRate);
+		[Fs, Stimuli, Sweeps] = handles.E.GetResampledTrace(...
+													handles.Values.Sweeplist, ...
+													decifactor);
+	else
+		[Stimuli, Sweeps] = handles.E.GetTrace(handles.Values.Sweeplist);		
+	end
+	fprintf('Export SampleRate: %d\n', Fs);
+	nStimuli = length(Stimuli);
+	nSweeps = length(Sweeps);
+	%-----------------------------------------------
+	% despike?
+	%-----------------------------------------------
+	if handles.Values.Export.RemoveSpikes
+		for s = 1:length(Sweeps)
+			[Sweeps{s}, ~] = deSpike(Sweeps{s}, Fs);
+		end
+	end
+	%-----------------------------------------------
+	% ExporT!
+	%-----------------------------------------------
+	if strcmpi(handles.Values.Export.ExportFormat, 'CSV')
+		%-----------------------------------------------
+		% export as csv
+		%-----------------------------------------------
+		%-----------------------------------------------
+		% get output filename from user
+		%-----------------------------------------------
+		% build default file name
+		fname = sprintf('%s_%d-%d.csv', ...
+									fullfile(handles.Files.rawpath, ...
+													handles.Files.basename), ...
+									handles.Values.Sweeplist(1), ...
+									handles.Values.Sweeplist(end) );
+		[filename, pathname] = uiputfile('*.csv', 'Export As Text File', fname);
+		% if user cancelled, abort
+		if isequal(filename, 0) || isequal(pathname, 0)
+			disp('Cancelled Export File..')
+			return
+		end
+		% check on sweeps
+		if nStimuli ~= nSweeps
+			error('%s: mismatch in sweeps and stimuli', mfilename);
+		end
+		% stimulus info
+		audstim = handles.AuditoryStim_text.String;
+		otherstim = handles.OtherStim_text.String;
+		comments = handles.Comments_text.String;
+		%-----------------------------------------------
+		% export to CSV
+		%-----------------------------------------------
+		fp = fopen(fullfile(pathname, filename), 'wt');
+		fprintf(fp, 'AuditoryStim:,%s,\n', audstim);
+		fprintf(fp, 'OtherStim:,%s,\n', otherstim);
+		fprintf(fp, 'Comments:,%s,\n', comments);
+		fprintf(fp, 'SampleRate:,%f,\n', Fs);
+		fprintf(fp, 'Data:,\n');
+		for n = 1:length(Sweeps{1})
+			for s = 1:nSweeps
+				fprintf(fp, '%f,%f,', Stimuli{s}(n), Sweeps{s}(n));
+			end
+			fprintf(fp, '\n');
+		end
+		fclose(fp);
+	else
+		%-----------------------------------------------
+		% export as MAT
+		%-----------------------------------------------
+		%-----------------------------------------------
+		% get output filename from user
+		%-----------------------------------------------
+		% build default file name
+		fname = sprintf('%s_%d-%d.mat', ...
+									fullfile(handles.Files.rawpath, ...
+													handles.Files.basename), ...
+									handles.Values.Sweeplist(1), ...
+									handles.Values.Sweeplist(end) );
+		[filename, pathname] = uiputfile('*.mat', 'Export As', fname);
+		% if user cancelled, abort
+		if isequal(filename, 0) || isequal(pathname, 0)
+			disp('Cancelled Export File..')
+			return
+		end
+		%-----------------------------------------------
+		% export to MAT
+		%-----------------------------------------------
+		save(fullfile(pathname, filename), 'Stimuli', 'Sweeps', 'Fs', ...
+													'audstim', 'otherstim', 'comments', ...
+													'nStimuli', 'nSweeps', '-MAT');
+	end
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function exportSpikeTimes_ctrl_Callback(hObject, eventdata, handles)
+	%-----------------------------------------------
+	% default values
+	%-----------------------------------------------
+	% threshold for spikes, V
+	spikethresh = -0.015;
+	% spike refractory period, ms
+	refractorytime = 2;			
+	%-----------------------------------------------
+	% check init
+	%-----------------------------------------------
+	if ~handles.E.isInitialized
+		warning('%s: Not initialized!', mfilename);
+		return
+	end
+	%-----------------------------------------------
+	% get sweeps
+	%-----------------------------------------------
+	[spiket, nspikes] = ...
+					handles.E.SpiketimesForCondition( ...
+								handles.Values.CurrentCondition, ...
+								'SPIKETHRESHOLD', spikethresh, ...
+								'REFRACTORYTIME', refractorytime );
+	%-----------------------------------------------
+	% plot rasters
+	%-----------------------------------------------
+	figure
+	rasterplot(spiket);
+	%-----------------------------------------------
+	% save
+	%-----------------------------------------------
+	if strcmpi(handles.Values.Export.ExportFormat, 'CSV')
+		%-----------------------------------------------
+		% export as csv
+		%-----------------------------------------------
+		%-----------------------------------------------
+		% get output filename from user
+		%-----------------------------------------------
+		% build default file name
+		fname = sprintf('%s_%d-%d_spiketimes.csv', ...
+									fullfile(handles.Files.rawpath, ...
+													handles.Files.basename), ...
+									handles.Values.Sweeplist(1), ...
+									handles.Values.Sweeplist(end) );
+		[filename, pathname] = uiputfile('*.csv', 'Export As Text File', fname);
+		% if user cancelled, abort
+		if isequal(filename, 0) || isequal(pathname, 0)
+			disp('Cancelled Spiketime File..')
+		end
+		%-----------------------------------------------
+		% export to CSV
+		%-----------------------------------------------
+		fp = fopen(fullfile(pathname, filename), 'wt');
+		fprintf(fp, 'AuditoryStim:,%s,\n', audstim);
+		fprintf(fp, 'OtherStim:,%s,\n', otherstim);
+		fprintf(fp, 'Comments:,%s,\n', comments);
+		fprintf(fp, 'SampleRate:,%f,\n', Fs);
+		fprintf(fp, 'Data:,\n');
+		nSweeps = length(spiket);
+		for s = 1:nSweeps
+			for t = 1:nspikes(s)
+				fprintf(fp, '%f,,', spiket{s}(t));
+			end
+			fprintf(fp, '\n');
+		end
+		fclose(fp);		
+	else
+		%-----------------------------------------------
+		% export as MAT
+		%-----------------------------------------------
+		%-----------------------------------------------
+		% get output filename from user
+		%-----------------------------------------------
+		% build default file name
+		fname = sprintf('%s_%d-%d_spiketimes.mat', ...
+									fullfile(handles.Files.rawpath, ...
+													handles.Files.basename), ...
+									handles.Values.Sweeplist(1), ...
+									handles.Values.Sweeplist(end) );
+		[filename, pathname] = uiputfile('*.mat', 'Export As', fname);
+		% if user cancelled, abort
+		if isequal(filename, 0) || isequal(pathname, 0)
+			disp('Cancelled Spiketime File..')
+			return
+		end
+		save(fullfile(pathname, filename), 'spiket', 'nspikes', '-MAT');
+	end
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function exportRemoveSpikes_ctrl_Callback(hObject, eventdata, handles)
+	val = read_ui_val(hObject);
+	handles.Values.Export.RemoveSpikes = val;
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function exportSampleRate_ctrl_Callback(hObject, eventdata, handles)
+	val = read_ui_str(hObject, 'n');
+	if isempty(val) || (val < 0)
+		warning('Invalid Sample Rate');
+		update_ui_str(hObject, handles.Values.Export.SampleRate);
+	else
+		handles.Values.Export.SampleRate = val;
+	end
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function exportResample_ctrl_Callback(hObject, eventdata, handles)
+	val = read_ui_val(hObject);
+	if val
+		enable_ui(handles.ExportSampleRate_label);
+		enable_ui(handles.exportSampleRate_ctrl);
+	else
+		disable_ui(handles.ExportSampleRate_label);
+		disable_ui(handles.exportSampleRate_ctrl);
+	end
+	handles.Values.Export.ResampleData = val;
+	handles.Values.Export.SampleRate = ...
+						read_ui_str(handles.exportSampleRate_ctrl, 'n');
+	guidata(hObject, handles);
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+function exportFormat_ctrl_Callback(hObject, eventdata, handles)
+	val = read_ui_val(hObject);
+	switch(val)
+		case 1
+			handles.Values.Export.Format = 'MAT';
+			fprintf('Export as MAT'\n);
+		case 2
+			handles.Values.Export.Format = 'CSV';
+			fprintf('Export as CSV'\n);
+	end
+	guidata(hObject, handles);
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
 
 
 %**************************************************************************
@@ -900,28 +1065,43 @@ function Plot_Save_menu_Callback(hObject, eventdata, handles)
 %*****************************************************************************
 %*****************************************************************************
 function Tmin_ctrl_CreateFcn(hObject, eventdata, handles) %#ok<*INUSD>
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+	if ispc && isequal(get(hObject,'BackgroundColor'), ...
+								get(0,'defaultUicontrolBackgroundColor'))
 		 set(hObject,'BackgroundColor','white');
 	end
-	
 function Tmax_ctrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+	if ispc && isequal(get(hObject,'BackgroundColor'), ...
+								get(0,'defaultUicontrolBackgroundColor'))
 		 set(hObject,'BackgroundColor','white');
-	end	
+	end
 function Ymin_ctrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+	if ispc && isequal(get(hObject,'BackgroundColor'), ...
+								get(0,'defaultUicontrolBackgroundColor'))
 		 set(hObject,'BackgroundColor','white');
 	end
 function Ymax_ctrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+	if ispc && isequal(get(hObject,'BackgroundColor'), ...
+								get(0,'defaultUicontrolBackgroundColor'))
 		 set(hObject,'BackgroundColor','white');
 	end
 function Condition_ctrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+	if ispc && isequal(get(hObject,'BackgroundColor'), ...
+								get(0,'defaultUicontrolBackgroundColor'))
 		 set(hObject,'BackgroundColor','white');
 	end
 function Sweep_ctrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+	if ispc && isequal(get(hObject,'BackgroundColor'), ...
+								get(0,'defaultUicontrolBackgroundColor'))
+		 set(hObject,'BackgroundColor','white');
+	end
+function exportSampleRate_ctrl_CreateFcn(hObject, eventdata, handles)
+	if ispc && isequal(get(hObject,'BackgroundColor'), ...
+								get(0,'defaultUicontrolBackgroundColor'))
+		 set(hObject,'BackgroundColor','white');
+	end
+function exportFormat_ctrl_CreateFcn(hObject, eventdata, handles)
+	if ispc && isequal(get(hObject,'BackgroundColor'), ...
+								get(0,'defaultUicontrolBackgroundColor'))
 		 set(hObject,'BackgroundColor','white');
 	end
 %-------------------------------------------------------------------------- 
