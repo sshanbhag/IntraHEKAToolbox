@@ -22,7 +22,7 @@ function varargout = HEKAview(varargin)
 
 % Edit the above text to modify the response to help HEKAview
 
-% Last Modified by GUIDE v2.5 01-May-2017 20:01:30
+% Last Modified by GUIDE v2.5 03-May-2017 16:07:30
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -88,262 +88,14 @@ function varargout = HEKAview_OutputFcn(hObject, eventdata, handles)
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
 
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-function initialize_gui(fig_handle, handles, isreset)
-	% If the metricdata field is present and the reset flag is false, it means
-	% we are we are just re-initializing a GUI by calling it from the cmd line
-	% while it is up. So, bail out as we dont want to reset the data.
-	if isfield(handles, 'Values') && ~isreset
-		 return;
-	end
-	% set some default values
-	handles.Files.logpath = ...
-			'/Users/sshanbhag/Work/Data/Mouse/IntracellularAmygdala/RawData';
-	handles.Files.logfile = 'IntracellDataLog.csv';
-	handles.Files.logname = fullfile(handles.Files.logpath, ...
-																handles.Files.logfile);
-	set(handles.textLogFile, 'String', handles.Files.logname);
-	handles.Files.rawpath = ...
-		'/Users/sshanbhag/Work/Data/IntracellularAmygdala/RawData/2012-03-12';
-	handles.Files.basename = '2012-03-12-4'; 
-	handles.Files.datname = [handles.Files.basename '.dat'];
-	handles.Files.pgfname = [handles.Files.basename '.pgf'];
-	handles.Files.pulname = [handles.Files.basename '.pul'];
-	handles.Files.dscname = [handles.Files.basename '.dsc'];
-	% experiment object
-	handles.E = experiment;
-	% line , text colors
-	handles.Settings.MeanLineColor = 'm';
-	handles.Settings.MeanTextColor = handles.Settings.MeanLineColor;
-	handles.Settings.StimStartLineColor = 'g';
-	handles.Settings.StimEndLineColor = 'r';
-	% set some initial values
-	handles.Values.Tmin = 0;
-	handles.Values.Tmax = 1000;
-	handles.Values.Ymin = -100;
-	handles.Values.Ymax = 10;
-	handles.Values.Decifactor = 10;
-	handles.Values.Grid = 1;
-	handles.Values.PlotMean = 1;
-	handles.Values.PlotStimStartEnd = 1;
-	% export settings
-	handles.Values.Export.RemoveSpikes = 0;
-	handles.Values.Export.ResampleData = 0;
-	handles.Values.Export.SampleRate = [];
-	handles.Values.Export.ExportFormat = 'MAT';
-	update_ui_val(handles.exportFormat_ctrl, 1);
-	disable_ui(handles.exportSampleRate_ctrl);
-	disable_ui(handles.ExportSampleRate_label);
-	% store settings
-	guidata(handles.figure1, handles);
-	% update ctrls
-	update_ui_str(handles.Tmin_ctrl, handles.Values.Tmin);
-	update_ui_str(handles.Tmax_ctrl, handles.Values.Tmax);
-	update_ui_str(handles.Ymin_ctrl, handles.Values.Ymin);
-	update_ui_str(handles.Ymax_ctrl, handles.Values.Ymax);
-	update_ui_str(handles.Decimate_ctrl, handles.Values.Decifactor);
-	update_ui_val(handles.Grid_ctrl, handles.Values.Grid);
-	update_ui_val(handles.TraceMean_ctrl, handles.Values.PlotMean);
-	update_ui_val(handles.StimStartEnd_ctrl, ...
-									handles.Values.PlotStimStartEnd);
-	update_ui_val(handles.exportRemoveSpikes_ctrl, ...
-										handles.Values.Export.RemoveSpikes);
-	update_ui_val(handles.exportResample_ctrl, ...
-										handles.Values.Export.ResampleData);
-	update_ui_str(handles.exportSampleRate_ctrl, ...
-										handles.Values.Export.SampleRate);
-	% Update handles structure
-	guidata(handles.figure1, handles);
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-function update_gui(hObj, handles)
-	%----------------------------------------------------------
-	% select main plot axes
-	%----------------------------------------------------------
-	axes(handles.axesMain);
-	%----------------------------------------------------------
-	% check if data obj is initialized and ready
-	%----------------------------------------------------------
-	if ~handles.E.isInitialized
-		warning('%s: Not initialized!', mfilename);
-		return
-	else
-		% make local copy of handles to make things a little more compact
-		% when calling parametersw
-		H = handles;
-	end
-	%----------------------------------------------------------
-	% update information amount stimulus/condition/experiment
-	%----------------------------------------------------------
-	S = H.E.GetStimulusForCondition(H.Values.CurrentCondition);
-	update_ui_str(H.Animal_text, H.E.Info.Animal);
-	update_ui_str(H.Depth_text, H.E.Info.Depth);
-	update_ui_str(handles.SampleRate_text, ...
-								sprintf('%d', H.E.GetSampleRate));
-	update_ui_str(H.AuditoryStim_text, S.AuditoryStimulus);
-	update_ui_str(H.OtherStim_text, S.OtherStimulus);
-	update_ui_str(H.Comments_text, S.Comments);	
-	%----------------------------------------------------------
-	% update plot depending on what is to be plotted...
-	%----------------------------------------------------------
-	if H.Values.CurrentSweep == -1
-		% SHOW ALL TRACES
-		% plot all traces for this condition
-		H.E.PlotTracesForCondition(	H.Values.CurrentCondition, ...
-														H.Values.Decifactor, ...
-														gcf);
-		% set x axis (time) limits
-		xlim([H.Values.Tmin H.Values.Tmax]);
-		% enable grid if Values.Grid is set
-		if H.Values.Grid
-			grid(H.axesMain, 'on');
-			drawnow
-			update_ui_val(H.Grid_ctrl, 1);
-		else
-			grid(H.axesMain, 'off');
-			drawnow
-			update_ui_val(H.Grid_ctrl, 0);
-		end
-	else
-		% SHOW SINGLE TRACE
-		% get trace data and plot them
-		axes(H.axesMain);
-		[dt, S, T] = H.E.GetResampledTrace(	H.Values.CurrentSweep, ...
-																H.Values.Decifactor);
-		tvec = 1000 .* ((1:length(S)) - 1)  .* dt;
-		plot(tvec, H.Values.Ymax - (1.5 + normalize(S)), ...
-															'k', tvec, 1000 * T, 'b');
-		% set plot limits
-		ylim([H.Values.Ymin H.Values.Ymax]);
-		xlim([H.Values.Tmin H.Values.Tmax]);
-		% enable grid if Values.Grid is set
-		if H.Values.Grid
-			grid(H.axesMain, 'on');
-			drawnow
-			update_ui_val(H.Grid_ctrl, 1);
-		else
-			grid(H.axesMain, 'off');
-			drawnow
-			update_ui_val(H.Grid_ctrl, 0);
-		end
-		% show line for mean of trace
-		if H.Values.PlotMean
-			[t1, t2] = H.E.GetTrace(H.Values.CurrentSweep); %#ok<ASGLU>
-			% get avg and std of trace in mV (hence the factor of 1000)
-			t2avg = 1000 * mean(t2);
-			t2std = std(1000 * t2); %#ok<NASGU>
-			%		axes(H.axesMain);
-			% draw line
-			line(xlim, [t2avg t2avg],  'Color', H.Settings.MeanLineColor);
-			text(H.Values.Tmax, t2avg, sprintf(' %.2f', t2avg), 'Color', ...
-															H.Settings.MeanTextColor);
-		end
-	end
-	%----------------------------------------------------------
-	% show stim start/end lines
-	%----------------------------------------------------------
-	if H.Values.PlotStimStartEnd
-		stiminfo = H.E.GetStimParamForCondition(H.Values.CurrentCondition);
-		% draw start line
-		line(stiminfo.start .* [1 1], ylim, 'Color', ...
-								H.Settings.StimStartLineColor);
-		% draw end line
-		line(stiminfo.end .* [1 1], ylim, 'Color', ...
-								H.Settings.StimEndLineColor);
-	end
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-
 
 %**************************************************************************
 %**************************************************************************
 %**************************************************************************
-% CTRL callbacks
+% CONDITION and SWEEP panel callbacks
 %**************************************************************************
 %**************************************************************************
 %**************************************************************************
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-function Tmin_ctrl_Callback(hObject, eventdata, handles) %#ok<*DEFNU>
-	newval = str2double(get(hObject, 'String'));
-	if isnan(newval)
-		 update_ui_str(hObject, handles.Values.Tmin);
-		 errordlg('Tmin must be a number','Error');
-	elseif newval > handles.Values.Tmax
-		 update_ui_str(hObject, handles.Values.Tmin);
-		 eStr = sprintf('Tmin must be less than Tmax (%.2f)', ...
-									handles.Values.Tmax);
-		 errordlg(eStr,'Error');
-	else
-		% Save the new Tmin_ctrl value
-		handles.Values.Tmin = newval;
-		guidata(hObject,handles)
-		update_gui(hObject, handles);
-	end
-%-------------------------------------------------------------------------- 
-function Tmax_ctrl_Callback(hObject, eventdata, handles)
-	newval = str2double(get(hObject, 'String'));
-	if isnan(newval)
-		 update_ui_str(hObject, handles.Values.Tmax);
-		 errordlg('Tmax must be a number','Error');
-	elseif newval < handles.Values.Tmin
-		 update_ui_str(hObject, handles.Values.Tmax);
-		 eStr = sprintf('Tmax must be greater than Tmin (%.2f)', ...
-									handles.Values.Tmin);
-		 errordlg(eStr,'Error');
-	else
-		% Save the new Tmax_ctrl value
-		handles.Values.Tmax = newval;
-		guidata(hObject,handles)
-		update_gui(hObject, handles);
-	end
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-function Ymin_ctrl_Callback(hObject, eventdata, handles)
-	newval = str2double(get(hObject, 'String'));
-	if isnan(newval)
-		 update_ui_str(hObject, handles.Values.Ymin);
-		 errordlg('Ymin must be a number','Error');
-	elseif newval > handles.Values.Ymax
-		 update_ui_str(hObject, handles.Values.Ymin);
-		 eStr = sprintf('Ymin must be less than Ymax (%.2f)', ...
-												handles.Values.Ymax);
-		 errordlg(eStr,'Error');
-	else
-		% Save the new Ymin_ctrl value
-		handles.Values.Ymin = newval;
-		guidata(hObject,handles)
-		update_gui(hObject, handles);
-	end
-%-------------------------------------------------------------------------- 
-function Ymax_ctrl_Callback(hObject, eventdata, handles)
-	newval = str2double(get(hObject, 'String'));
-	if isnan(newval)
-		 update_ui_str(hObject, handles.Values.Ymax);
-		 errordlg('Ymax must be a number','Error');
-	elseif newval < handles.Values.Ymin
-		 update_ui_str(hObject, handles.Values.Ymax);
-		 eStr = sprintf('Ymax must be greater than Ymin (%.2f)', ...
-									handles.Values.Ymin);
-		 errordlg(eStr,'Error');
-	else
-		% Save the new Ymax_ctrl value
-		handles.Values.Ymax = newval;
-		guidata(hObject,handles)
-		update_gui(hObject, handles);
-	end
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
 function Condition_ctrl_Callback(hObject, eventdata, handles)
@@ -396,9 +148,6 @@ function Condition_ctrl_Callback(hObject, eventdata, handles)
 	update_gui(hObject, handles);
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
-
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
 function Sweep_ctrl_Callback(hObject, eventdata, handles)
 	index = read_ui_val(hObject);
 	if index <= handles.Values.Nsweeps
@@ -411,120 +160,39 @@ function Sweep_ctrl_Callback(hObject, eventdata, handles)
 	update_gui(hObject, handles);
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
-
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-function Decimate_ctrl_Callback(hObject, eventdata, handles)
-	% read value from ctrl string
-	newval = read_ui_str(hObject, 'n');
-	% check it!
-	if newval < 1
-		warning(['%s: Decimation Factor must be an ' ...
-						'integer greater than 0'], mfilename);
-		update_ui_str(hObject, handles.Values.Decifactor);
-		return
-	end
-	handles.Values.Decifactor =  newval;
-	guidata(hObject, handles);
-	if handles.E.isInitialized
-		update_gui(hObject, handles);
-	end
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-% --- Executes on Grid ctrl checkbox
-%-------------------------------------------------------------------------- 
-function Grid_ctrl_Callback(hObject, eventdata, handles)
-	handles.Values.Grid = read_ui_val(hObject);
-	guidata(hObject, handles);
-	if handles.E.isInitialized
-		update_gui(hObject, handles);
-	end
-%-------------------------------------------------------------------------- 
-
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-% --- Executes on Mouse Position button press
-%-------------------------------------------------------------------------- 
-function MousePos_ctrl_Callback(hObject, eventdata, handles)
-	mpVal = read_ui_val(hObject);
-	while mpVal == 1
-		[ms, mv, button] = ginput(1);	
-		update_ui_str(handles.Ms_text, sprintf('%.2f', ms));
-		update_ui_str(handles.Mv_text, sprintf('%.2f', mv));
-		if button == 3
-			mpVal = 0;
-			update_ui_val(hObject, 0);
-		else
-			mpVal = read_ui_val(hObject);
-		end		
-	end
-%-------------------------------------------------------------------------- 
-
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-% Executes when Show Mean checkbox is selected
-%-------------------------------------------------------------------------- 
-function TraceMean_ctrl_Callback(hObject, eventdata, handles)
-	% Get value from object
-	handles.Values.PlotMean = read_ui_val(hObject);
-	sprintf('handles.Values.PlotMean = %f', handles.Values.PlotMean);
-	guidata(hObject, handles);
-	update_gui(hObject, handles);
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-% executes when Show Stim Onset/offset is selected
-%-------------------------------------------------------------------------- 
-function StimStartEnd_ctrl_Callback(hObject, eventdata, handles)
-	handles.Values.PlotStimStartEnd = read_ui_val(hObject);
-	guidata(hObject, handles);
-	if handles.E.isInitialized
-		update_gui(hObject, handles);
-	end
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-
-%**************************************************************************
-%**************************************************************************
-%**************************************************************************
-% BUTTONS
 %**************************************************************************
 %**************************************************************************
 %**************************************************************************
 
-%-------------------------------------------------------------------------- 
-% --- Executes on button press in calculate.
-%-------------------------------------------------------------------------- 
-function calculate_Callback(hObject, eventdata, handles)
-%-------------------------------------------------------------------------- 
 
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
 %-------------------------------------------------------------------------- 
-% --- Executes on button press in reset.
-%-------------------------------------------------------------------------- 
-function reset_Callback(hObject, eventdata, handles)
-	initialize_gui(gcbf, handles, true);
-%-------------------------------------------------------------------------- 
-
-%-------------------------------------------------------------------------- 
-% --- Executes on button press in debug.
-function debug_Callback(hObject, eventdata, handles)
-	keyboard
-%-------------------------------------------------------------------------- 
-
-%-------------------------------------------------------------------------- 
-% --- Executes on button press in buttonLoadData.
+%--------------------------------------------------------------------------
+% LOAD DATA
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
 function buttonLoadData_Callback(hObject, eventdata, handles)
 	LoadData(hObject, eventdata, handles);
 %-------------------------------------------------------------------------- 
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
 
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
 %--------------------------------------------------------------------------
-% --- Executes on button press in buttonMean.
+%--------------------------------------------------------------------------
+% CALCULATE PANEL CALLBACKS
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
 function buttonMean_Callback(hObject, eventdata, handles)
+%--------------------------------------------------------------------------
+% Calculate mean trace
+%--------------------------------------------------------------------------
 	%-----------------------------------------------
 	% despike?
 	%-----------------------------------------------
@@ -572,18 +240,17 @@ function buttonMean_Callback(hObject, eventdata, handles)
 	hold off
 	ylim([yminmax(1) max(stim2)]);
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % --- Executes on button press in buttonSpikeTimes.
 %--------------------------------------------------------------------------
 function buttonSpikeTimes_Callback(hObject, eventdata, handles)
 	%-----------------------------------------------
-	% default values
+	% get threshold, holdoff values
 	%-----------------------------------------------
 	% threshold for spikes, V
-	spikethresh = -0.015;
+	spikethresh = 0.001 * handles.Values.SpikeThreshold;
 	% spike refractory period, ms
-	refractorytime = 2;			
+	refractorytime = handles.Values.HoldoffTime;
 	%-----------------------------------------------
 	% check init
 	%-----------------------------------------------
@@ -622,8 +289,60 @@ function buttonSpikeTimes_Callback(hObject, eventdata, handles)
 	else
 		save(fullfile(pathname, filename), 'spiket', 'nspikes', '-MAT');
 	end
+	guidata(hObject, handles);
 %--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function SpikeThrehold_ctrl_Callback(hObject, eventdata, handles)
+%---------------------------------------
+% set Spike Threshold
+%---------------------------------------
+	newVal = read_ui_str(handles.SpikeThrehold_ctrl, 'n');
+	if ~isnumeric(newVal) || isempty(newVal)
+		errordlg('Spike Threshold must be a number', ...
+					'HEKAview: Threshold error');
+		update_ui_str(handles.SpikeThrehold_ctrl, handles.Values.SpikeThreshold);
+	elseif ~between(newVal, -1000, 1000)
+		errordlg('Spike Threshold must be between -1000 and 1000 mV', ...
+					'HEKAview: Threshold error');
+		update_ui_str(handles.SpikeThrehold_ctrl, handles.Values.SpikeThreshold);
+	else
+		handles.Values.SpikeThreshold = newVal;
+	end
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function SpikeHoldoff_ctrl_Callback(hObject, eventdata, handles)
+%---------------------------------------
+% set Spike Holdoff
+%---------------------------------------
+	newVal = read_ui_str(handles.SpikeHoldoff_ctrl, 'n');
+	if ~isnumeric(newVal) || isempty(newVal)
+		errordlg('Spike Holdoff value must be a number', ...
+					'HEKAview: Holdoff error');
+		update_ui_str(handles.SpikeHoldoff_ctrl, handles.Values.HoldoffTime);
+	elseif ~between(newVal, 0, 1000)
+		errordlg('Spike holdoff time must be between 0 and 1000 ms', ...
+					'HEKAview: Holdoff error');
+		update_ui_str(handles.SpikeHoldoff_ctrl, handles.Values.HoldoffTime);
+	else
+		handles.Values.HoldoffTime = newVal;
+	end
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
 
+
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
+%--------------------------------------------------------------------------
+% LOG FILE PANEL CALLBACKS
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
 %-------------------------------------------------------------------------- 
 function buttonLoadLogFile_Callback(hObject, eventdata, handles)
 	%-----------------------------------------------
@@ -647,110 +366,10 @@ function buttonLoadLogFile_Callback(hObject, eventdata, handles)
 	guidata(hObject, handles);
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
-
 %**************************************************************************
 %**************************************************************************
 %**************************************************************************
 
-
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
-% --- Load Data
-%-------------------------------------------------------------------------- 
-function LoadData(hObject, eventdata, handles)
-	%-----------------------------------------------
-	% get file from user
-	%-----------------------------------------------
-	[filename, pathname] = uigetfile('*.dat', 'Pick a HEKA data file', ...
-													handles.Files.rawpath);
-	% if user cancelled, abort
-	if isequal(filename, 0) || isequal(pathname, 0)
-		disp('Cancelled Load File..')
-		return
-	end
-	%-----------------------------------------------
-	% Update files information
-	%-----------------------------------------------
-	[rawpath, basename, ~] = fileparts(fullfile(pathname, filename));
-	handles.Files.rawpath = rawpath;
-	handles.Files.basename = basename;
-	handles.Files.datname = [handles.Files.basename '.dat'];
-	handles.Files.pgfname = [handles.Files.basename '.pgf'];
-	handles.Files.pulname = [handles.Files.basename '.pul'];
-	handles.Files.dscname = [handles.Files.basename '.dsc'];
-	%-----------------------------------------------
-	% read in information from files
-	%-----------------------------------------------
-	% read info from pgf file
-	pgf = readPGF(fullfile(handles.Files.rawpath, handles.Files.pgfname));
-	% read info from pul file
-	pul = struct('tr', [], 'rr', []);
-	[pul.tr, pul.rr] = readPUL(fullfile(handles.Files.rawpath, ...
-										handles.Files.pulname));
-	% build dsc struct
-	dsc = buildDSC(fullfile(handles.Files.rawpath, ...
-									handles.Files.datname), pgf, pul.rr); %#ok<NASGU>
-	% create experiment object
-	handles.E = experiment(handles.Files.rawpath, ...
-										handles.Files.datname, 'initialize');
-	% load log file
-	try
-		logData = readLog(handles.Files.logname);
-	catch errMsg
-		sprintf('%s', errMsg.identifier)
-		error(['%s: error reading log file, ' ...
-					'check path or filename and re-load'], mfilename);
-	end
-	% set information in experiment object from logData
-	handles.E.SetInfoFromLog(logData);
-	% store changes
-	guidata(hObject, handles);
-	%-----------------------------------------------
-	% update Condition list box
-	%-----------------------------------------------
-	handles.Values.Nconditions = handles.E.Info.Nconditions;
-	handles.Values.CurrentCondition = 1;
-	update_ui_val(handles.Condition_ctrl, handles.Values.CurrentCondition);
-	cstr = cell(handles.Values.Nconditions, 1);
-	for n = 1:handles.Values.Nconditions 
-		cstr{n} = sprintf('%d', n);
-	end
-	set(handles.Condition_ctrl, 'String', cstr);
-	%-----------------------------------------------
-	% update Sweep list box
-	%-----------------------------------------------
-	% first get the list of sweeps for current condition (and # of sweeps)
-	sweeplist = handles.E.GetSweepListForCondition(...
-													handles.Values.CurrentCondition);
-	handles.Values.Nsweeps = length(sweeplist);
-	handles.Values.Sweeplist = sweeplist;
-	% set the current sweep to -1 (all sweeps)
-	handles.Values.CurrentSweep = -1;
-	% create text list of sweeps
-	cstr = cell(handles.Values.Nsweeps + 1, 1);
-	for n = 1:handles.Values.Nsweeps
-		cstr{n} = sprintf('%d', sweeplist(n));
-	end
-	cstr{end} = 'All';
-	set(handles.Sweep_ctrl, 'String', cstr);
-	% update Sweep control to current sweep (all sweeps)
-	update_ui_val(handles.Sweep_ctrl, handles.Values.Nsweeps + 1);
-	%-----------------------------------------------
-	% update File string in Recording Info panel
-	%-----------------------------------------------
-	update_ui_str(handles.File_text, handles.Files.datname);
-	if isempty(read_ui_str(handles.exportSampleRate_ctrl))
-		update_ui_str(handles.exportSampleRate_ctrl, handles.E.GetSampleRate);
-	end
-	update_ui_str(handles.SampleRate_text, ...
-								sprintf('%.0f', handles.E.GetSampleRate));
-	%-----------------------------------------------
-	% Store changes, update gui
-	%-----------------------------------------------	
-	guidata(hObject, handles);
-	update_gui(hObject, handles);
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 
 
 %**************************************************************************
 %**************************************************************************
@@ -762,7 +381,6 @@ function LoadData(hObject, eventdata, handles)
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
-% --- Executes on button press in ExportSweeps_ctrl.
 function ExportSweeps_ctrl_Callback(hObject, eventdata, handles)
 	%-----------------------------------------------
 	% check init
@@ -802,6 +420,13 @@ function ExportSweeps_ctrl_Callback(hObject, eventdata, handles)
 		end
 	end
 	%-----------------------------------------------
+	% stimulus info
+	%-----------------------------------------------
+	AuditoryStimulus = handles.AuditoryStim_text.String;
+	OtherStimulus = handles.OtherStim_text.String;
+	Comments = handles.Comments_text.String;
+	
+	%-----------------------------------------------
 	% ExporT!
 	%-----------------------------------------------
 	if strcmpi(handles.Values.Export.ExportFormat, 'CSV')
@@ -827,17 +452,13 @@ function ExportSweeps_ctrl_Callback(hObject, eventdata, handles)
 		if nStimuli ~= nSweeps
 			error('%s: mismatch in sweeps and stimuli', mfilename);
 		end
-		% stimulus info
-		audstim = handles.AuditoryStim_text.String;
-		otherstim = handles.OtherStim_text.String;
-		comments = handles.Comments_text.String;
 		%-----------------------------------------------
 		% export to CSV
 		%-----------------------------------------------
 		fp = fopen(fullfile(pathname, filename), 'wt');
-		fprintf(fp, 'AuditoryStim:,%s,\n', audstim);
-		fprintf(fp, 'OtherStim:,%s,\n', otherstim);
-		fprintf(fp, 'Comments:,%s,\n', comments);
+		fprintf(fp, 'AuditoryStim:,%s,\n', AuditoryStimulus);
+		fprintf(fp, 'OtherStim:,%s,\n', OtherStimulus);
+		fprintf(fp, 'Comments:,%s,\n', Comments);
 		fprintf(fp, 'SampleRate:,%f,\n', Fs);
 		fprintf(fp, 'Data:,\n');
 		for n = 1:length(Sweeps{1})
@@ -870,19 +491,19 @@ function ExportSweeps_ctrl_Callback(hObject, eventdata, handles)
 		% export to MAT
 		%-----------------------------------------------
 		save(fullfile(pathname, filename), 'Stimuli', 'Sweeps', 'Fs', ...
-													'audstim', 'otherstim', 'comments', ...
-													'nStimuli', 'nSweeps', '-MAT');
+									'AuditoryStimulus', 'OtherStimulus', 'Comments', ...
+									'nStimuli', 'nSweeps', '-MAT');
 	end
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 function exportSpikeTimes_ctrl_Callback(hObject, eventdata, handles)
 	%-----------------------------------------------
-	% default values
+	% get threshold, holdoff values
 	%-----------------------------------------------
 	% threshold for spikes, V
-	spikethresh = -0.015;
+	spikethresh = 0.001 * handles.Values.SpikeThreshold;
 	% spike refractory period, ms
-	refractorytime = 2;			
+	refractorytime = handles.Values.HoldoffTime;
 	%-----------------------------------------------
 	% check init
 	%-----------------------------------------------
@@ -903,6 +524,12 @@ function exportSpikeTimes_ctrl_Callback(hObject, eventdata, handles)
 	%-----------------------------------------------
 	figure
 	rasterplot(spiket);
+	%-----------------------------------------------
+	% stimulus info
+	%-----------------------------------------------
+	AuditoryStimulus = handles.AuditoryStim_text.String;
+	OtherStimulus = handles.OtherStim_text.String;
+	Comments = handles.Comments_text.String;
 	%-----------------------------------------------
 	% save
 	%-----------------------------------------------
@@ -928,11 +555,11 @@ function exportSpikeTimes_ctrl_Callback(hObject, eventdata, handles)
 		% export to CSV
 		%-----------------------------------------------
 		fp = fopen(fullfile(pathname, filename), 'wt');
-		fprintf(fp, 'AuditoryStim:,%s,\n', audstim);
-		fprintf(fp, 'OtherStim:,%s,\n', otherstim);
-		fprintf(fp, 'Comments:,%s,\n', comments);
+		fprintf(fp, 'AuditoryStim:,%s,\n', AuditoryStimulus);
+		fprintf(fp, 'OtherStim:,%s,\n', OtherStimulus);
+		fprintf(fp, 'Comments:,%s,\n', Comments);
 		fprintf(fp, 'SampleRate:,%f,\n', Fs);
-		fprintf(fp, 'Data:,\n');
+		fprintf(fp, 'SpikeTimes:,\n');
 		nSweeps = length(spiket);
 		for s = 1:nSweeps
 			for t = 1:nspikes(s)
@@ -1009,7 +636,163 @@ function exportFormat_ctrl_Callback(hObject, eventdata, handles)
 	guidata(hObject, handles);
 %-------------------------------------------------------------------------- 
 %-------------------------------------------------------------------------- 
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
 
+
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
+% PLOT callbacks
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+function Tmin_ctrl_Callback(hObject, eventdata, handles) %#ok<*DEFNU>
+	newval = str2double(get(hObject, 'String'));
+	if isnan(newval)
+		 update_ui_str(hObject, handles.Values.Tmin);
+		 errordlg('Tmin must be a number','Error');
+	elseif newval > handles.Values.Tmax
+		 update_ui_str(hObject, handles.Values.Tmin);
+		 eStr = sprintf('Tmin must be less than Tmax (%.2f)', ...
+									handles.Values.Tmax);
+		 errordlg(eStr,'Error');
+	else
+		% Save the new Tmin_ctrl value
+		handles.Values.Tmin = newval;
+		guidata(hObject,handles)
+		update_gui(hObject, handles);
+	end
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+function Tmax_ctrl_Callback(hObject, eventdata, handles)
+	newval = str2double(get(hObject, 'String'));
+	if isnan(newval)
+		 update_ui_str(hObject, handles.Values.Tmax);
+		 errordlg('Tmax must be a number','Error');
+	elseif newval < handles.Values.Tmin
+		 update_ui_str(hObject, handles.Values.Tmax);
+		 eStr = sprintf('Tmax must be greater than Tmin (%.2f)', ...
+									handles.Values.Tmin);
+		 errordlg(eStr,'Error');
+	else
+		% Save the new Tmax_ctrl value
+		handles.Values.Tmax = newval;
+		guidata(hObject,handles)
+		update_gui(hObject, handles);
+	end
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+function Ymin_ctrl_Callback(hObject, eventdata, handles)
+	newval = str2double(get(hObject, 'String'));
+	if isnan(newval)
+		 update_ui_str(hObject, handles.Values.Ymin);
+		 errordlg('Ymin must be a number','Error');
+	elseif newval > handles.Values.Ymax
+		 update_ui_str(hObject, handles.Values.Ymin);
+		 eStr = sprintf('Ymin must be less than Ymax (%.2f)', ...
+												handles.Values.Ymax);
+		 errordlg(eStr,'Error');
+	else
+		% Save the new Ymin_ctrl value
+		handles.Values.Ymin = newval;
+		guidata(hObject,handles)
+		update_gui(hObject, handles);
+	end
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+function Ymax_ctrl_Callback(hObject, eventdata, handles)
+	newval = str2double(get(hObject, 'String'));
+	if isnan(newval)
+		 update_ui_str(hObject, handles.Values.Ymax);
+		 errordlg('Ymax must be a number','Error');
+	elseif newval < handles.Values.Ymin
+		 update_ui_str(hObject, handles.Values.Ymax);
+		 eStr = sprintf('Ymax must be greater than Ymin (%.2f)', ...
+									handles.Values.Ymin);
+		 errordlg(eStr,'Error');
+	else
+		% Save the new Ymax_ctrl value
+		handles.Values.Ymax = newval;
+		guidata(hObject,handles)
+		update_gui(hObject, handles);
+	end
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+function Decimate_ctrl_Callback(hObject, eventdata, handles)
+	% read value from ctrl string
+	newval = read_ui_str(hObject, 'n');
+	% check it!
+	if newval < 1
+		warning(['%s: Decimation Factor must be an ' ...
+						'integer greater than 0'], mfilename);
+		update_ui_str(hObject, handles.Values.Decifactor);
+		return
+	end
+	handles.Values.Decifactor =  newval;
+	guidata(hObject, handles);
+	if handles.E.isInitialized
+		update_gui(hObject, handles);
+	end
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+function Grid_ctrl_Callback(hObject, eventdata, handles)
+%----------------------------------------------------
+% show or hide grid on plot
+%----------------------------------------------------
+	handles.Values.Grid = read_ui_val(hObject);
+	guidata(hObject, handles);
+	if handles.E.isInitialized
+		update_gui(hObject, handles);
+	end
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+function MousePos_ctrl_Callback(hObject, eventdata, handles)
+%----------------------------------------------------
+% turn on/off mouse position detect
+%----------------------------------------------------
+mpVal = read_ui_val(hObject);
+	while mpVal == 1
+		[ms, mv, button] = ginput(1);	
+		update_ui_str(handles.Ms_text, sprintf('%.2f', ms));
+		update_ui_str(handles.Mv_text, sprintf('%.2f', mv));
+		if button == 3
+			mpVal = 0;
+			update_ui_val(hObject, 0);
+		else
+			mpVal = read_ui_val(hObject);
+		end		
+	end
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+function TraceMean_ctrl_Callback(hObject, eventdata, handles)
+%----------------------------------------------------
+% Executes when Show Mean checkbox is selected
+%----------------------------------------------------
+% Get value from object
+	handles.Values.PlotMean = read_ui_val(hObject);
+	sprintf('handles.Values.PlotMean = %f', handles.Values.PlotMean);
+	guidata(hObject, handles);
+	update_gui(hObject, handles);
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+function StimStartEnd_ctrl_Callback(hObject, eventdata, handles)
+%----------------------------------------------------
+% executes when Show Stim Onset/offset is selected
+%----------------------------------------------------
+	handles.Values.PlotStimStartEnd = read_ui_val(hObject);
+	guidata(hObject, handles);
+	if handles.E.isInitialized
+		update_gui(hObject, handles);
+	end
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
 
 %**************************************************************************
 %**************************************************************************
@@ -1048,12 +831,37 @@ function Plot_Save_menu_Callback(hObject, eventdata, handles)
 		close(h);
 	end
 %-------------------------------------------------------------------------- 
-
-
 %*****************************************************************************
 %*****************************************************************************
 %*****************************************************************************
 
+
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
+% BUTTONS
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
+%-------------------------------------------------------------------------- 
+% --- Executes on button press in calculate. (NOT used?)
+%-------------------------------------------------------------------------- 
+function calculate_Callback(hObject, eventdata, handles)
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+% --- Executes on button press in reset.
+%-------------------------------------------------------------------------- 
+function reset_Callback(hObject, eventdata, handles)
+	initialize_gui(gcbf, handles, true);
+%-------------------------------------------------------------------------- 
+%-------------------------------------------------------------------------- 
+% --- Executes on button press in debug.
+function debug_Callback(hObject, eventdata, handles)
+	keyboard
+%-------------------------------------------------------------------------- 
+%**************************************************************************
+%**************************************************************************
+%**************************************************************************
 
 %*****************************************************************************
 %*****************************************************************************
@@ -1104,6 +912,18 @@ function exportFormat_ctrl_CreateFcn(hObject, eventdata, handles)
 								get(0,'defaultUicontrolBackgroundColor'))
 		 set(hObject,'BackgroundColor','white');
 	end
+function SpikeThrehold_ctrl_CreateFcn(hObject, eventdata, handles)
+	if ispc && isequal(get(hObject,'BackgroundColor'), ...
+								get(0,'defaultUicontrolBackgroundColor'))
+		 set(hObject,'BackgroundColor','white');
+	end
+function SpikeHoldoff_ctrl_CreateFcn(hObject, eventdata, handles)
+	if ispc && isequal(get(hObject,'BackgroundColor'), ...
+								get(0,'defaultUicontrolBackgroundColor'))
+		 set(hObject,'BackgroundColor','white');
+	end
 %-------------------------------------------------------------------------- 
 %*****************************************************************************
 %*****************************************************************************
+
+
