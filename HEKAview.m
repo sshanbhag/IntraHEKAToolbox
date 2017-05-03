@@ -22,7 +22,7 @@ function varargout = HEKAview(varargin)
 
 % Edit the above text to modify the response to help HEKAview
 
-% Last Modified by GUIDE v2.5 03-May-2017 16:07:30
+% Last Modified by GUIDE v2.5 03-May-2017 18:10:40
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -292,19 +292,19 @@ function buttonSpikeTimes_Callback(hObject, eventdata, handles)
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-function SpikeThrehold_ctrl_Callback(hObject, eventdata, handles)
+function SpikeThreshold_ctrl_Callback(hObject, eventdata, handles)
 %---------------------------------------
 % set Spike Threshold
 %---------------------------------------
-	newVal = read_ui_str(handles.SpikeThrehold_ctrl, 'n');
+	newVal = read_ui_str(handles.SpikeThreshold_ctrl, 'n');
 	if ~isnumeric(newVal) || isempty(newVal)
 		errordlg('Spike Threshold must be a number', ...
 					'HEKAview: Threshold error');
-		update_ui_str(handles.SpikeThrehold_ctrl, handles.Values.SpikeThreshold);
+		update_ui_str(handles.SpikeThreshold_ctrl, handles.Values.SpikeThreshold);
 	elseif ~between(newVal, -1000, 1000)
 		errordlg('Spike Threshold must be between -1000 and 1000 mV', ...
 					'HEKAview: Threshold error');
-		update_ui_str(handles.SpikeThrehold_ctrl, handles.Values.SpikeThreshold);
+		update_ui_str(handles.SpikeThreshold_ctrl, handles.Values.SpikeThreshold);
 	else
 		handles.Values.SpikeThreshold = newVal;
 	end
@@ -397,18 +397,17 @@ function ExportSweeps_ctrl_Callback(hObject, eventdata, handles)
 	% downsample? get sweeps, info
 	%-----------------------------------------------
 	Fs = handles.E.GetSampleRate;
-	handles.Values.Export.SampleRate
-	if handles.Values.Export.ResampleData && ...
-					(Fs ~= handles.Values.Export.SampleRate)
-		decifactor = round(handles.E.GetSampleRate / ...
-										handles.Values.Export.SampleRate);
-		[Fs, Stimuli, Sweeps] = handles.E.GetResampledTrace(...
+	newFs = handles.Values.Export.SampleRate;
+	if handles.Values.Export.ResampleData && (Fs ~= newFs)
+		[Stimuli, Sweeps] = handles.E.GetResampledTrace(...
 													handles.Values.Sweeplist, ...
-													decifactor);
+													newFs);
+		fprintf('Original SampleRate: %d\n', Fs);
+		fprintf('Export SampleRate: %d\n', newFs);
+		Fs = newFs;
 	else
 		[Stimuli, Sweeps] = handles.E.GetTrace(handles.Values.Sweeplist);		
 	end
-	fprintf('Export SampleRate: %d\n', Fs);
 	nStimuli = length(Stimuli);
 	nSweeps = length(Sweeps);
 	%-----------------------------------------------
@@ -427,7 +426,7 @@ function ExportSweeps_ctrl_Callback(hObject, eventdata, handles)
 	Comments = handles.Comments_text.String;
 	
 	%-----------------------------------------------
-	% ExporT!
+	% Export!
 	%-----------------------------------------------
 	if strcmpi(handles.Values.Export.ExportFormat, 'CSV')
 		%-----------------------------------------------
@@ -627,11 +626,11 @@ function exportFormat_ctrl_Callback(hObject, eventdata, handles)
 	val = read_ui_val(hObject);
 	switch(val)
 		case 1
-			handles.Values.Export.Format = 'MAT';
-			fprintf('Export as MAT'\n);
+			handles.Values.Export.ExportFormat = 'MAT';
+			fprintf('Export as MAT\n');
 		case 2
-			handles.Values.Export.Format = 'CSV';
-			fprintf('Export as CSV'\n);
+			handles.Values.Export.ExportFormat = 'CSV';
+			fprintf('Export as CSV\n');
 	end
 	guidata(hObject, handles);
 %-------------------------------------------------------------------------- 
@@ -912,7 +911,7 @@ function exportFormat_ctrl_CreateFcn(hObject, eventdata, handles)
 								get(0,'defaultUicontrolBackgroundColor'))
 		 set(hObject,'BackgroundColor','white');
 	end
-function SpikeThrehold_ctrl_CreateFcn(hObject, eventdata, handles)
+function SpikeThreshold_ctrl_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), ...
 								get(0,'defaultUicontrolBackgroundColor'))
 		 set(hObject,'BackgroundColor','white');
@@ -925,5 +924,3 @@ function SpikeHoldoff_ctrl_CreateFcn(hObject, eventdata, handles)
 %-------------------------------------------------------------------------- 
 %*****************************************************************************
 %*****************************************************************************
-
-

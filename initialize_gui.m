@@ -70,5 +70,3 @@ update_ui_str(handles.exportSampleRate_ctrl, ...
 									handles.Values.Export.SampleRate);
 % Update handles structure
 guidata(handles.figure1, handles);
-%-------------------------------------------------------------------------- 
-%-------------------------------------------------------------------------- 

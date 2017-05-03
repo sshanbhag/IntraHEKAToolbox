@@ -69,7 +69,7 @@ end
 % get the sweeps for the indicated Condition
 sinfo = obj.Info.Stimulus(Condition);		
 sweeplist = obj.GetSweepListForCondition(Condition);
-[sampleinterval, t1, t2] = obj.GetResampledTrace(sweeplist, Decifactor);
+[sampleinterval, t1, t2] = obj.GetDecimatedTrace(sweeplist, Decifactor);
 if ~iscell(t2)
 	if ~isempty(t2)
 		t2 = {t2};
