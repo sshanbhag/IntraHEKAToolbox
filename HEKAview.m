@@ -199,25 +199,25 @@ function buttonMean_Callback(hObject, eventdata, handles)
 	%-----------------------------------------------
 	if handles.Values.RemoveSpikesFromMean
 		disp('Removing Spikes for mean calculation');
-		[sweep_mean, sweep_std, stim] = ...
+		[sweep_mean, sweep_std, stim, Fs, sweeps] = ...
 										handles.E.MeanTraceForCondition( ...
-										handles.Values.CurrentCondition, ...
-										'NoSpikes');
+												handles.Values.CurrentCondition, ...
+												'NoSpikes', ...
+												'Decimate', handles.Values.Decifactor);
 	else
-		[sweep_mean, sweep_std, stim] = ...
+		[sweep_mean, sweep_std, stim, Fs, sweeps] = ...
 										handles.E.MeanTraceForCondition( ...
-										handles.Values.CurrentCondition);
+												handles.Values.CurrentCondition, ...
+												'Decimate', handles.Values.Decifactor);
 	end
 	%-----------------------------------------------
 	% plot mean and error bars
 	%-----------------------------------------------
-	% get sampling rate
-	Fs = handles.E.GetSampleRate;
 	% time vector
 	tvec = 1000 * ((1:length(sweep_mean)) - 1) * (1/Fs);
 	% create new fig
 	figure
-	% plot mean and area
+	% plot mean and area (convert mean and std to mV from V
 	shadedErrorBar(tvec, 1000*sweep_mean, 1000.*sweep_std, ...
 									{'MarkerFaceColor', [0 0.4470 0.7410]})
 	xlabel('Time (ms)')
@@ -227,13 +227,19 @@ function buttonMean_Callback(hObject, eventdata, handles)
 								handles.Values.Sweeplist(1), ...
 								handles.Values.Sweeplist(end) );
 	title(fname, 'Interpreter', 'none');
-	% plot stimulus
+	% plot stimulus at top of plot
 	yminmax = ylim;
 	stim2 = yminmax(2) - 10*( diff(yminmax)/100)*normalize(stim);
 	hold on
 		plot(tvec, stim2, 'Color', 0.5 * [1 1 1])
 	hold off
 	ylim([yminmax(1) max(stim2)]);
+	if handles.Values.OverlaySweeps
+		hold on
+		for n = 1:length(sweeps)
+			plot(tvec, 1000*sweeps{n}, 'Color', 0.25 * [1 1 1]);
+		end
+	end	
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 function OverlaySweeps_ctrl_Callback(hObject, eventdata, handles)

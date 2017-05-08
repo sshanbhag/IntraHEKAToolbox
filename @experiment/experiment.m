@@ -322,7 +322,8 @@ classdef experiment < handle
 			[trace1, trace2] = obj.GetTrace(sweeplist);
 			% if decifactor == 1, nothing to do!
 			if decifactor == 1
-				rate = obj.Sweeps(sweeplist(1)).Rate;
+				% Rate from Sweeps is actually dt
+				rate = 1./obj.Sweeps(sweeplist(1)).Rate;
 				return
 			end
 			% # of sweeps
@@ -332,12 +333,12 @@ classdef experiment < handle
 			% which is unlikely...  nevertheless...
 			tmprate = zeros(size(sweeplist));
 			for n = 1:ns
-				tmprate(n) = obj.Sweeps(sweeplist(n)).Rate;
+				tmprate(n) = 1./obj.Sweeps(sweeplist(n)).Rate;
 			end
 			% use the lowest value of the found rates (actually, sample
 			% intervals, in seconds) and multiply by decifactor to get the new
 			% rate
-			rate = min(tmprate) * decifactor;
+			rate = min(tmprate) / decifactor;
 			% do the actual decimation
 			if ns == 1
 				trace1 = decimate(trace1, decifactor);
@@ -511,10 +512,17 @@ classdef experiment < handle
 		
 		%--------------------------------------------------------------------
 		%--------------------------------------------------------------------
-		function [t2avg, t2std, t1, st] = MeanTraceForCondition(obj, ...
+		function [t2avg, t2std, varargout] = MeanTraceForCondition(obj, ...
 																		Condition, varargin)
 		%--------------------------------------------------------------------
 		% returns average trace for specific Condition
+		%--------------------------------------------------------------------
+		% [traceavg, tracestd, stimtrace, samprate, traces] = 
+		%								MeanTraceForCondition(Condition,	
+		% 															 'NoSpikes',
+		%															 'Resample', <new rate>,
+		%																 OR
+		% 															 'Decimate', <deci factor>)
 		%--------------------------------------------------------------------
 			% make sure object is initialized
 			if ~obj.CheckInitAndCondition(Condition)
@@ -522,7 +530,9 @@ classdef experiment < handle
 								mfilename, Condition);
 			end
 			% check input args
-			DESPIKE = 0;
+			DESPIKE = false;
+			RESAMPLE = false;
+			DECIMATE = false;
 			optargin = size(varargin,2);
 % 			stdargin = nargin - optargin;
 			if optargin
@@ -531,33 +541,63 @@ classdef experiment < handle
 				while n < optargin
 					if ischar(varargin{n})
 						if strcmpi(varargin{n}, 'NoSpikes')
-							DESPIKE = 1;
+							DESPIKE = true;
 							n = n + 1;
+						elseif strcmpi(varargin{n}, 'Resample')
+							RESAMPLE = true;
+							new_rate = varargin{n+1};
+							n = n+2;
+						elseif strcmpi(varargin{n}, 'Decimate')
+							DECIMATE = true;
+							deci_factor = varargin{n+1};
+							n = n+1;
+						else
+							error('%s: unknown option %s', mfilename, varargin{n});
 						end
 					end
 				end
 			end
-			% get the sweeps for the indicated Condition
-			obj.GetStimulusForCondition(Condition);		
+			if RESAMPLE && DECIMATE
+				warning('%s: cannot both resample and decimate!', mfilename);
+				RESAMPLE = false;
+				DECIMATE = false;
+			end
+			% get the sweeps for the indicated Condition (resample or decimate
+			% as needed)
+			obj.GetStimulusForCondition(Condition);
 			sweeplist = obj.GetSweepListForCondition(Condition);
-			[trace1, trace2] = obj.GetTrace(sweeplist);
+			if RESAMPLE
+				[trace1, trace2] = obj.GetResampledTrace(sweeplist, new_rate);
+				Fs = new_rate;
+			elseif DECIMATE
+				[Fs, trace1, trace2] = obj.GetDecimatedTrace(sweeplist, ...
+																					deci_factor);
+			else
+				[trace1, trace2] = obj.GetTrace(sweeplist);
+				Fs = obj.GetSampleRate;
+			end
 			% store first trace1 data, then clear trace1 to save space
 			t1 = trace1{1};
 			clear trace1
 			% despike traces if needed
 			if DESPIKE
-				st = cell(size(trace2));
 				for s = 1:length(sweeplist)
-					[trace2{s}, st{s}] = deSpike(trace2{s}, ...
-														obj.Sweeps(sweeplist(s)).Rate);
+					trace2{s} = deSpike(trace2{s}, Fs);
 				end
-				
-			else
-				st = {};
 			end
 			% compute mean of trace2 cell array
 			t2avg = mean(cell2mat(trace2'), 2);
 			t2std = std(cell2mat(trace2'), 0, 2);
+			% assign outputs
+			if nargout >= 3
+				varargout{1} = t1;
+			end
+			if nargout >= 4
+				varargout{2} = Fs;
+			end
+			if nargout == 5
+				varargout{3} = trace2;
+			end			
 		end
 		%--------------------------------------------------------------------
 		

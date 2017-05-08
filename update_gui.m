@@ -25,7 +25,7 @@ S = H.E.GetStimulusForCondition(H.Values.CurrentCondition);
 update_ui_str(H.Animal_text, H.E.Info.Animal);
 update_ui_str(H.Depth_text, H.E.Info.Depth);
 update_ui_str(handles.SampleRate_text, ...
-							sprintf('%d', H.E.GetSampleRate));
+							sprintf('%.0f', H.E.GetSampleRate));
 update_ui_str(H.AuditoryStim_text, S.AuditoryStimulus);
 update_ui_str(H.OtherStim_text, S.OtherStimulus);
 update_ui_str(H.Comments_text, S.Comments);	
@@ -54,9 +54,9 @@ else
 	% SHOW SINGLE TRACE
 	% get trace data and plot them
 	axes(H.axesMain);
-	[dt, S, T] = H.E.GetDecimatedTrace(	H.Values.CurrentSweep, ...
+	[Fs, S, T] = H.E.GetDecimatedTrace(	H.Values.CurrentSweep, ...
 															H.Values.Decifactor);
-	tvec = 1000 .* ((1:length(S)) - 1)  .* dt;
+	tvec = 1000 .* ((1:length(S)) - 1)  ./ Fs;
 	plot(tvec, H.Values.Ymax - (1.5 + normalize(S)), ...
 														'k', tvec, 1000 * T, 'b');
 	% set plot limits
