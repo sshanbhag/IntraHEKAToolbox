@@ -22,7 +22,7 @@ function varargout = HEKAview(varargin)
 
 % Edit the above text to modify the response to help HEKAview
 
-% Last Modified by GUIDE v2.5 08-May-2017 13:46:25
+% Last Modified by GUIDE v2.5 08-May-2017 14:18:54
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -180,6 +180,7 @@ function buttonLoadData_Callback(hObject, eventdata, handles)
 %**************************************************************************
 %**************************************************************************
 
+
 %**************************************************************************
 %**************************************************************************
 %**************************************************************************
@@ -196,10 +197,8 @@ function buttonMean_Callback(hObject, eventdata, handles)
 	%-----------------------------------------------
 	% despike?
 	%-----------------------------------------------
-	yn = uiyesno('title', 'Sweep Mean', 'string', 'Remove Spikes?');
-	% get mean trace (without or with spikes)
-	if strcmpi(yn, 'yes')
-		disp('Removing Spikes...');
+	if handles.Values.RemoveSpikesFromMean
+		disp('Removing Spikes for mean calculation');
 		[sweep_mean, sweep_std, stim] = ...
 										handles.E.MeanTraceForCondition( ...
 										handles.Values.CurrentCondition, ...
@@ -218,8 +217,12 @@ function buttonMean_Callback(hObject, eventdata, handles)
 	tvec = 1000 * ((1:length(sweep_mean)) - 1) * (1/Fs);
 	% create new fig
 	figure
-	% plot mean
-	plot(tvec, 1000*sweep_mean);
+	% plot mean and area
+	shadedErrorBar(tvec, 1000*sweep_mean, 1000.*sweep_std, ...
+									{'MarkerFaceColor', [0 0.4470 0.7410]})
+	% 	errH = ploterrea(tvec, 1000*sweep_mean, 1000.*sweep_std); %#ok<NASGU>
+	% 	% plot mean
+	% 	plot(tvec, 1000*sweep_mean);
 	xlabel('Time (ms)')
 	ylabel('mV');
 	fname = sprintf('%s_%d-%d.mat', ...
@@ -227,11 +230,11 @@ function buttonMean_Callback(hObject, eventdata, handles)
 								handles.Values.Sweeplist(1), ...
 								handles.Values.Sweeplist(end) );
 	title(fname, 'Interpreter', 'none');
-	% plot error bars
-	hold on
-		plot(tvec, 1000*(sweep_mean + sweep_std), 'r');
-		plot(tvec, 1000*(sweep_mean - sweep_std), 'r');
-	hold off
+	% 	% plot error bars
+	% 	hold on
+	% 		plot(tvec, 1000*(sweep_mean + sweep_std), 'r');
+	% 		plot(tvec, 1000*(sweep_mean - sweep_std), 'r');
+	% 	hold off
 	% plot stimulus
 	yminmax = ylim;
 	stim2 = yminmax(2)+0.1*(normalize(stim) - 1);
@@ -239,6 +242,19 @@ function buttonMean_Callback(hObject, eventdata, handles)
 		plot(tvec, stim2, 'Color', 0.5 * [1 1 1])
 	hold off
 	ylim([yminmax(1) max(stim2)]);
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function OverlaySweeps_ctrl_Callback(hObject, eventdata, handles)
+	% Controls whether individual spikes will be plotted along with computed
+	% mean trace
+	handles.Values.OverlaySweeps = read_ui_val(hObject);
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function RemoveSpikesFromMean_ctrl_Callback(hObject, eventdata, handles)
+	% controls whether spikes will included or removed from mean calculation
+	handles.Values.RemoveSpikesFromMean = read_ui_val(hObject);
+	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 % --- Executes on button press in buttonSpikeTimes.
@@ -924,12 +940,3 @@ function SpikeHoldoff_ctrl_CreateFcn(hObject, eventdata, handles)
 %-------------------------------------------------------------------------- 
 %*****************************************************************************
 %*****************************************************************************
-
-
-% --- Executes on button press in OverlaySweeps_ctrl.
-function OverlaySweeps_ctrl_Callback(hObject, eventdata, handles)
-% hObject    handle to OverlaySweeps_ctrl (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of OverlaySweeps_ctrl
