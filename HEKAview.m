@@ -286,23 +286,23 @@ function buttonSpikeTimes_Callback(hObject, eventdata, handles)
 	%-----------------------------------------------
 	figure
 	rasterplot(spiket);
-	%-----------------------------------------------
-	% get output filename from user
-	%-----------------------------------------------
-	% build default file name
-	fname = sprintf('%s_%d-%d_spiketimes.mat', ...
-								fullfile(handles.Files.rawpath, ...
-												handles.Files.basename), ...
-								handles.Values.Sweeplist(1), ...
-								handles.Values.Sweeplist(end) );
-	[filename, pathname] = uiputfile('*.mat', 'Export As', fname);
-	% if user cancelled, abort
-	if isequal(filename, 0) || isequal(pathname, 0)
-		disp('Cancelled Spiketime File..')
-		return
-	else
-		save(fullfile(pathname, filename), 'spiket', 'nspikes', '-MAT');
-	end
+% 	%-----------------------------------------------
+% 	% get output filename from user
+% 	%-----------------------------------------------
+% 	% build default file name
+% 	fname = sprintf('%s_%d-%d_spiketimes.mat', ...
+% 								fullfile(handles.Files.rawpath, ...
+% 												handles.Files.basename), ...
+% 								handles.Values.Sweeplist(1), ...
+% 								handles.Values.Sweeplist(end) );
+% 	[filename, pathname] = uiputfile('*.mat', 'Export As', fname);
+% 	% if user cancelled, abort
+% 	if isequal(filename, 0) || isequal(pathname, 0)
+% 		disp('Cancelled Spiketime File..')
+% 		return
+% 	else
+% 		save(fullfile(pathname, filename), 'spiket', 'nspikes', '-MAT');
+% 	end
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
@@ -503,9 +503,10 @@ function ExportSweeps_ctrl_Callback(hObject, eventdata, handles)
 		%-----------------------------------------------
 		% export to MAT
 		%-----------------------------------------------
+		SweepList = handles.Values.SweepList; %#ok<NASGU>
 		save(fullfile(pathname, filename), 'Stimuli', 'Sweeps', 'Fs', ...
 									'AuditoryStimulus', 'OtherStimulus', 'Comments', ...
-									'nStimuli', 'nSweeps', '-MAT');
+									'nStimuli', 'nSweeps', 'Sweeplist', '-MAT');
 	end
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
@@ -532,14 +533,17 @@ function exportSpikeTimes_ctrl_Callback(hObject, eventdata, handles)
 								handles.Values.CurrentCondition, ...
 								'SPIKETHRESHOLD', spikethresh, ...
 								'REFRACTORYTIME', refractorytime );
+	Fs = handles.E.GetSampleRate;
 	%-----------------------------------------------
 	% plot rasters
 	%-----------------------------------------------
 	figure
 	rasterplot(spiket);
 	%-----------------------------------------------
-	% stimulus info
+	% animal and stimulus info
 	%-----------------------------------------------
+	Animal = handles.E.Info.Animal;
+	Depth = handles.E.Info.Depth;
 	AuditoryStimulus = handles.AuditoryStim_text.String;
 	OtherStimulus = handles.OtherStim_text.String;
 	Comments = handles.Comments_text.String;
@@ -563,20 +567,24 @@ function exportSpikeTimes_ctrl_Callback(hObject, eventdata, handles)
 		% if user cancelled, abort
 		if isequal(filename, 0) || isequal(pathname, 0)
 			disp('Cancelled Spiketime File..')
+			return
 		end
 		%-----------------------------------------------
 		% export to CSV
 		%-----------------------------------------------
 		fp = fopen(fullfile(pathname, filename), 'wt');
+		fprintf(fp, 'Animal:,%s,\n', Animal);
+		fprintf(fp, 'Depth:,%d,\n', Depth);
 		fprintf(fp, 'AuditoryStim:,%s,\n', AuditoryStimulus);
 		fprintf(fp, 'OtherStim:,%s,\n', OtherStimulus);
 		fprintf(fp, 'Comments:,%s,\n', Comments);
 		fprintf(fp, 'SampleRate:,%f,\n', Fs);
-		fprintf(fp, 'SpikeTimes:,\n');
+		fprintf(fp, 'Sweep#,SpikeTimes:,\n');
 		nSweeps = length(spiket);
 		for s = 1:nSweeps
+			fprintf(fp, '%d,', handles.Values.Sweeplist(s));
 			for t = 1:nspikes(s)
-				fprintf(fp, '%f,,', spiket{s}(t));
+				fprintf(fp, '%f,', spiket{s}(t));
 			end
 			fprintf(fp, '\n');
 		end
@@ -600,7 +608,10 @@ function exportSpikeTimes_ctrl_Callback(hObject, eventdata, handles)
 			disp('Cancelled Spiketime File..')
 			return
 		end
-		save(fullfile(pathname, filename), 'spiket', 'nspikes', '-MAT');
+		SweepList = handles.Values.Sweeplist; %#ok<NASGU>
+		save(fullfile(pathname, filename), 'spiket', 'nspikes', 'Fs', ...
+									'AuditoryStimulus', 'OtherStimulus', 'Comments', ...
+									'nStimuli', 'nSweeps', 'Sweeplist', '-MAT');
 	end
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
