@@ -220,9 +220,6 @@ function buttonMean_Callback(hObject, eventdata, handles)
 	% plot mean and area
 	shadedErrorBar(tvec, 1000*sweep_mean, 1000.*sweep_std, ...
 									{'MarkerFaceColor', [0 0.4470 0.7410]})
-	% 	errH = ploterrea(tvec, 1000*sweep_mean, 1000.*sweep_std); %#ok<NASGU>
-	% 	% plot mean
-	% 	plot(tvec, 1000*sweep_mean);
 	xlabel('Time (ms)')
 	ylabel('mV');
 	fname = sprintf('%s_%d-%d.mat', ...
@@ -230,14 +227,9 @@ function buttonMean_Callback(hObject, eventdata, handles)
 								handles.Values.Sweeplist(1), ...
 								handles.Values.Sweeplist(end) );
 	title(fname, 'Interpreter', 'none');
-	% 	% plot error bars
-	% 	hold on
-	% 		plot(tvec, 1000*(sweep_mean + sweep_std), 'r');
-	% 		plot(tvec, 1000*(sweep_mean - sweep_std), 'r');
-	% 	hold off
 	% plot stimulus
 	yminmax = ylim;
-	stim2 = yminmax(2)+0.1*(normalize(stim) - 1);
+	stim2 = yminmax(2) - 10*( diff(yminmax)/100)*normalize(stim);
 	hold on
 		plot(tvec, stim2, 'Color', 0.5 * [1 1 1])
 	hold off
