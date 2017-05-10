@@ -7,6 +7,8 @@ function [dout, spiket] = deSpike(din, Fs, varargin)
 % 
 % removes spikes from intracellular trace 
 % 
+% *requires AudioToolbox and UtilitiesToolbox from TytoLogy project*
+%
 %------------------------------------------------------------------------
 % Input Arguments:
 %	din	raw spike trace
@@ -29,7 +31,7 @@ function [dout, spiket] = deSpike(din, Fs, varargin)
 %	dout		despiked trace (at sampling rate of Fs)
 %	spiket	times of detected spikes (seconds)
 %------------------------------------------------------------------------
-% See also: filtfilt, butter, lpfilter
+% See also: filtfilt, butter, lpfilter, spikeschmitt3
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
